@@ -20,7 +20,7 @@ dbInterface = ->
 
 pad2 = (num) -> if num < 9 then "0" + num else num
 
-timestamp = (date=new Date(), separator="")->
+timestamp = (date=new Date(), separator="") ->
   [
     date.getUTCFullYear()
     pad2(date.getUTCMonth() + 1)
@@ -64,11 +64,11 @@ down = (schema, migrations, cb) ->
     down = readMigrationFile(version, "down")
 
     schema.exec down, (err) ->
-      return cb("Down `migrations/#{version}`: #{err}") if err
+      return cb("Down migrations/#{version}: #{err}") if err
 
       schema.remove version, (err) ->
-        return cb("Down `migrations/#{version}`: #{err}") if err
-        console.log "Down `migrations/#{version}` OK"
+        return cb("Down migrations/#{version}: #{err}") if err
+        console.log "Down migrations/#{version}"
         cb null
   , cb
 
@@ -143,9 +143,9 @@ Commands =
               return cb(err) if err
               schema.exec up, (err) ->
                 if err
-                  cb "Up `migrations/#{version}`: #{err}"
+                  cb "Up migrations/#{version}: #{err}"
                 else
-                  console.log "Up `migrations/#{version}` OK"
+                  console.log "Up migrations/#{version}"
                   cb null
           , cb
         else
@@ -187,6 +187,10 @@ Commands =
       run: (cb) ->
         schema.all (err, migrations) ->
           return cb(err) if err
+          if migrations.length is 0
+            console.log "0 migrations found"
+            return cb(null)
+
           versions = []
 
           # Undo all
