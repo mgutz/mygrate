@@ -19,7 +19,7 @@ class Postgresql
     sql = """
         create table if not exists schema_migrations(
           version varchar primary key,
-          up text,
+          up text ,
           down text,
           created_at timestamp default now()
         );
@@ -67,6 +67,9 @@ class Postgresql
     @using (err, client) ->
       client.query sql, [version], (err) ->
         cb err
+
+  reset: (cb) ->
+    @exec "DROP SCHEMA public CASCADE;", cb
 
 
 module.exports = Postgresql

@@ -14,14 +14,13 @@ dbInterface = ->
   }
 
 
-
 pad2 = (num) ->
   out = ""
   out += "0"  if num < 9
   out + num
 
 
-timestamp = (date=new Date(), separator=" ")->
+timestamp = (date=new Date(), separator="")->
   [
     date.getUTCFullYear()
     pad2(date.getUTCMonth() + 1)
@@ -37,19 +36,8 @@ ensureDirs = ->
     console.log "`migrations` directory created"
 
   unless Path.existsSync("./migrations/config.js")
-    Fs.writeFileSync "./migrations/config.js", """
-module.exports = {
-  development: {
-    postgresql: "tcp://USER:PASSWORD@HOST/DB"
-  },
-  test: {
-    postgresql: "tcp://USER:PASSWORD@HOST/DB"
-  },
-  production: {
-    postgresql: "tcp://USER:PASSWORD@HOST/DB"
-  },
-};
-"""
+    sample = Fs.readFileSync(__dirname+"/../src/test/config.sample", "utf8")
+    Fs.writeFileSync "./migrations/config.js", sample
     console.log "`migrations/config.js` created. Requires editing."
 
 
@@ -66,7 +54,10 @@ getSubDirs = (dirname, cb) ->
 
 readMigrationFile = (migration, which) ->
   filename = "migrations/"+migration+"/"+which+".sql"
-  Fs.readFileSync filename, "utf8"
+  if Path.existsSync(filename)
+    Fs.readFileSync filename, "utf8"
+  else
+    ""
 
 
 down = (schema, migrations, cb) ->
@@ -103,6 +94,11 @@ module.exports =
       Fs.writeFileSync path+"/up.sql", ""
       Fs.writeFileSync path+"/down.sql", ""
       console.log "Migration files created: "+path
+
+
+  # Initializes migrations directory with sample config.js
+  init: =>
+    ensureDirs()
 
 
   # Runs all `up` migrations not yet executed on the database.
@@ -217,6 +213,16 @@ module.exports =
     , (err) ->
       if err
         console.error err
+      process.exit()
+
+
+  reset: =>
+    {schema} = dbInterface()
+    schema.reset (err) ->
+      if err
+        console.error "Reset: "+err
+      else
+        console.log "Reset OK"
       process.exit()
 
 
