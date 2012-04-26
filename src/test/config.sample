@@ -1,0 +1,11 @@
+module.exports = {
+  development: {
+    postgresql: { connectionString: "tcp://user_dev:dev@devvm/db_dev" }
+  },
+  test: {
+    postgresql: { connectionString: "tcp://user_dev:dev@devvm/db_dev" }
+  },
+  production: {
+    postgresql: { connectionString: "tcp://user_dev:dev@devvm/db_dev" }
+  }
+}
