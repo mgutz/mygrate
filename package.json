@@ -1,0 +1,16 @@
+{
+  "author": "",
+  "name": "schema",
+  "version": "0.0.0",
+  "bin": "./bin/schema",
+  "dependencies": {
+    "async": "*",
+    "commander": "*",
+    "pg": "*"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "engines": {
+    "node": "*"
+  }
+}

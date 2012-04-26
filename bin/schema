@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+
+var prog = require("commander")
+  , commands = require("../lib/commands");
+
+prog.version("0.1.0");
+prog.command("gen").description("Generate new migration.").action(commands.generate);
+prog.command("up").description("Execute new migrations.").action(commands.migrateUp);
+prog.command("down").description("Rollback {N|version}.").action(commands.migrateDown);
+prog.command("history").description("Show deployed migrations").action(commands.history);
+prog.parse(process.argv);
+
+
+// account for ['node', 'script']
+if (process.argv.length <= 2) {
+  commands.history();
+}
+
+// vim: set filetype=javascript:
+

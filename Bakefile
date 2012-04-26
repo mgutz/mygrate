@@ -1,0 +1,19 @@
+#. Compiles CoffeeScript `src` directory
+function compile {
+    coffee -c -o . src
+}
+
+
+function schema {
+    compile
+    bin/schema $@
+}
+
+
+function clean {
+    rm -rf lib
+    rm -rf migrations/20*
+}
+
+
+# vim: set filetype=sh :
