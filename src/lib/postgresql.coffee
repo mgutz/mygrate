@@ -68,9 +68,5 @@ class Postgresql
       client.query sql, [version], (err) ->
         cb err
 
-  reset: (cb) ->
-    @exec "DROP SCHEMA public CASCADE;", cb
-
-
 module.exports = Postgresql
 

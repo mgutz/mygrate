@@ -6,11 +6,14 @@ var prog = require("commander")
 prog.version("0.1.0");
 
 prog.command("init")
-  .description("Initializes migration directory with sample config.js")
+  .description("Creates migration directory complete with config.js and first migration")
   .action(commands.init);
 
 prog.command("gen")
-  .description("Generate new migration.")
+  .description(
+    "Generate new migration.\n" +
+    "  schema gen add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
+    )
   .action(commands.generate);
 
 prog.command("up")
@@ -18,16 +21,17 @@ prog.command("up")
   .action(commands.migrateUp);
 
 prog.command("down")
-  .description("Rollback {N|version}.")
+  .description(
+    "Undo {COUNT|VERSION|all} migrations.\n" +
+    "  schema down 3                    rollback 3 migrations\n" +
+    "  schema down 201204261323-people  rollback to before specified version\n" +
+    "  schema down all                  rollback all\n"
+  )
   .action(commands.migrateDown);
 
 prog.command("history")
   .description("Show deployed migrations")
   .action(commands.history);
-
-prog.command("reset")
-  .description("Reset the database")
-  .action(commands.reset);
 
 prog.parse(process.argv);
 

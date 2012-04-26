@@ -4,6 +4,10 @@ prog = require("commander")
 async = require("async")
 
 dbInterface = ->
+  if !Path.existsSync("migrations")
+    console.error("migrations directory not found")
+    process.exit()
+
   Postgresql = require("./postgresql")
   env = process.env.NODE_ENV || "development"
   config = require(process.cwd()+"/migrations/config")[env]
@@ -29,12 +33,11 @@ timestamp = (date=new Date(), separator="")->
 initMigrationsDir = ->
   unless Path.existsSync("./migrations")
     Fs.mkdirSync("./migrations")
-    console.log "`migrations` directory created"
 
   unless Path.existsSync("./migrations/config.js")
     sample = Fs.readFileSync(__dirname+"/../src/test/config.sample", "utf8")
     Fs.writeFileSync "./migrations/config.js", sample
-    console.log "`migrations/config.js` created. Requires editing."
+    console.log "Created sample configuration. Edit migrations/config.js."
 
 
 getSubDirs = (dirname, cb) ->
@@ -101,7 +104,7 @@ Commands =
   # Initializes migrations directory with sample config.js
   init: =>
     initMigrationsDir()
-    Commands.generate()
+    Commands.generate("init")
 
 
   # Runs all `up` migrations not yet executed on the database.
@@ -186,7 +189,14 @@ Commands =
           return cb(err) if err
           versions = []
 
-          if countOrVersion.length < 3
+          # Undo all
+          if countOrVersion is "all"
+            for migration in migrations
+              versions.push migration.version
+            down schema, versions, cb
+
+          # Undo specific count
+          else if countOrVersion.length < 3
             count = parseInt(countOrVersion)
             for migration in migrations
               versions.push migration.version
@@ -195,6 +205,7 @@ Commands =
 
             down schema, versions, cb
 
+          # Undo all migrations including desired version
           else
             version = countOrVersion
 
@@ -218,25 +229,18 @@ Commands =
       process.exit()
 
 
-  reset: =>
-    {schema} = dbInterface()
-    schema.reset (err) ->
-      if err
-        console.error "Reset: "+err
-      else
-        console.log "Reset OK"
-      process.exit()
-
-
   # List a history of all executed migrations.
   history: =>
     {connectionInfo, schema} = dbInterface()
     schema.all (err, migrations) ->
       return cb(err) if err
       console.log "History connection="+JSON.stringify(connectionInfo)
-      for migration in migrations
-        at = timestamp(new Date(migration.created_at), "-")
-        console.log "#{at}\t#{migration.version}"
+      if migrations.length < 1
+        console.log "0 migrations found"
+      else
+        for migration in migrations
+          at = timestamp(new Date(migration.created_at), "-")
+          console.log "#{at}\t#{migration.version}"
       process.exit()
 
 
