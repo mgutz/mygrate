@@ -14,11 +14,7 @@ dbInterface = ->
   }
 
 
-pad2 = (num) ->
-  out = ""
-  out += "0"  if num < 9
-  out + num
-
+pad2 = (num) -> if num < 9 then "0" + num else num
 
 timestamp = (date=new Date(), separator="")->
   [
@@ -30,7 +26,7 @@ timestamp = (date=new Date(), separator="")->
   ].join(separator)
 
 
-ensureDirs = ->
+initMigrationsDir = ->
   unless Path.existsSync("./migrations")
     Fs.mkdirSync("./migrations")
     console.log "`migrations` directory created"
@@ -75,14 +71,20 @@ down = (schema, migrations, cb) ->
 
 
 ## COMMANDS
-module.exports =
+Commands =
   # Generates a migration with optional `suffix`
   #
   # Example
   #   generate 'add-post'   // creates `migrations/TIME-add-post/up.sql`
   #                         // and `migrations/TIME-add-post/down.sql`
   generate: (suffix) =>
-    ensureDirs()
+    if !Path.existsSync(Path.resolve("migrations"))
+      console.error "ERROR migrations directory not found. Try `schema init`"
+      process.exit()
+
+    if typeof suffix isnt "string"
+      console.error "Migration identifier missing"
+      process.exit()
 
     filename = timestamp()
     if typeof suffix is "string"
@@ -93,12 +95,13 @@ module.exports =
       Fs.mkdirSync path
       Fs.writeFileSync path+"/up.sql", ""
       Fs.writeFileSync path+"/down.sql", ""
-      console.log "Migration files created: "+path
+      console.log "Migration created: "+path
 
 
   # Initializes migrations directory with sample config.js
   init: =>
-    ensureDirs()
+    initMigrationsDir()
+    Commands.generate()
 
 
   # Runs all `up` migrations not yet executed on the database.
@@ -166,18 +169,17 @@ module.exports =
     lastMigration = null
 
     async.series
+      getLastMigration: (cb) ->
+        schema.last (err, migration) ->
+          return cb(err) if err
+          lastMigration = migration
+          cb err
 
       getMigrationDirs: (cb) ->
         getSubDirs "migrations", (err, subdirs) ->
           return cb(err) if err
           dirs = subdirs
           cb null
-
-      getLastMigration: (cb) ->
-        schema.last (err, migration) ->
-          return cb(err) if err
-          lastMigration = migration
-          cb err
 
       run: (cb) ->
         schema.all (err, migrations) ->
@@ -237,3 +239,5 @@ module.exports =
         console.log "#{at}\t#{migration.version}"
       process.exit()
 
+
+module.exports = Commands
