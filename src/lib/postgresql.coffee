@@ -1,4 +1,5 @@
 Pg = require("pg")
+Cp = require("child_process")
 
 class Postgresql
   constructor: (@config) ->
@@ -13,6 +14,16 @@ class Postgresql
 
       client.query sql, ->
         cb.apply null, Array.prototype.slice.apply(arguments)
+
+  execFile: (filename, cb) ->
+    port = @config.port || 5432
+    host = @config.host || "localhost"
+    command = "psql -U "+@config.user+" -f "+filename+" -d "+@config.database+" -h "+host+" -p "+post
+    Cp.exec command, (err, stdout, stderr) ->
+      console.log "stdout: " + stdout
+      console.log "stderr: " + stderr
+      if !error
+        consonle.error "error: ", err
 
 
   init: (cb) ->
