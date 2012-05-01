@@ -1,5 +1,5 @@
 Pg = require("pg")
-Cp = require("child_process")
+Utils = require("./utils")
 
 class Postgresql
   constructor: (@config) ->
@@ -18,21 +18,17 @@ class Postgresql
   execFile: (filename, cb) ->
     port = @config.port || 5432
     host = @config.host || "localhost"
-    command = "psql -U "+@config.user+" -f "+filename+" -d "+@config.database+" -h "+host+" -p "+post
-    Cp.exec command, (err, stdout, stderr) ->
-      console.log "stdout: " + stdout
-      console.log "stderr: " + stderr
-      if !error
-        consonle.error "error: ", err
+    command = "psql -U #{@config.user} -d #{@config.database} -h #{host} -p #{port} --file=#{filename}"
+    Utils.exec command, cb
 
 
   init: (cb) ->
     sql = """
         create table if not exists schema_migrations(
-          version varchar primary key,
-          up text ,
+          version varchar(256) not null primary key,
+          up text,
           down text,
-          created_at timestamp default now()
+          created_at timestamp default current_timestamp
         );
       """
     @exec sql, cb

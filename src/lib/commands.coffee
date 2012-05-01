@@ -8,13 +8,18 @@ dbInterface = ->
     console.error("migrations directory not found")
     process.exit()
 
-  Postgresql = require("./postgresql")
   env = process.env.NODE_ENV || "development"
   config = require(process.cwd()+"/migrations/config")[env]
 
+  for k, v of config
+    adapter = k
+    Adapter = require("./"+adapter)
+    break
+
+
   return {
-    connectionInfo: config.postgresql,
-    schema: new Postgresql(config.postgresql)
+    connectionInfo: config[adapter],
+    schema: new Adapter(config[adapter])
   }
 
 
@@ -50,9 +55,11 @@ getSubDirs = (dirname, cb) ->
   cb null, dirs
 
 
+migrationFile = (version, which) ->
+  Path.resolve("migrations/"+version+"/"+which+".sql")
 
 readMigrationFile = (migration, which) ->
-  filename = "migrations/"+migration+"/"+which+".sql"
+  filename = migrationFile(migration, which)
   if Path.existsSync(filename)
     Fs.readFileSync filename, "utf8"
   else
@@ -61,9 +68,7 @@ readMigrationFile = (migration, which) ->
 
 down = (schema, migrations, cb) ->
   async.forEachSeries migrations, (version, cb) ->
-    down = readMigrationFile(version, "down")
-
-    schema.exec down, (err) ->
+    schema.execFile migrationFile(version, "down"), (err) ->
       return cb("Down migrations/#{version}: #{err}") if err
 
       schema.remove version, (err) ->
@@ -139,9 +144,13 @@ Commands =
           async.forEachSeries versions, (version, cb) ->
             up = readMigrationFile(version, "up")
             down = readMigrationFile(version, "down")
+
             schema.add version, up, down, (err) ->
               return cb(err) if err
-              schema.exec up, (err) ->
+
+
+              filename = migrationFile(version, "up")
+              schema.execFile filename, (err) ->
                 if err
                   cb "Up migrations/#{version}: #{err}"
                 else

@@ -1,12 +1,13 @@
 {
-  "author": "",
+  "author": "Mario Gutierrez <mario@gitfunding.com>",
   "name": "schema",
   "version": "0.0.0",
   "bin": "./bin/schema",
   "dependencies": {
     "async": "*",
     "commander": "*",
-    "pg": "*"
+    "pg": "~0.6.17",
+    "mysql":"~0.9.5"
   },
   "devDependencies": {},
   "optionalDependencies": {},
