@@ -3,9 +3,18 @@ Utils = require("./utils")
 
 class Postgresql
   constructor: (@config) ->
+    @config.host = "localhost" unless @config.host
+    @config.port = 5432 unless @config.port
 
   using: (cb) ->
-    Pg.connect @config.connectionString, cb
+    connectionString = "tcp://"
+    connectionString += @config.user
+    connectionString += ":"+@config.password if @config.password
+    connectionString += "@"+@config.host 
+    connectionString += ":"+@config.port
+    connectionString += "/"+@config.database
+
+    Pg.connect connectionString, cb
 
 
   exec: (sql, cb) ->
