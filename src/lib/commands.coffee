@@ -85,7 +85,7 @@ Commands =
   # Example
   #   generate 'add-post'   // creates `migrations/TIME-add-post/up.sql`
   #                         // and `migrations/TIME-add-post/down.sql`
-  generate: (suffix) =>
+  generate: (suffix, options) =>
     if !Path.existsSync(Path.resolve("migrations"))
       console.error "ERROR migrations directory not found. Try `schema init`"
       process.exit()

@@ -3,7 +3,8 @@
 var prog = require("commander")
   , commands = require("../lib/commands");
 
-prog.version("0.1.0");
+prog
+  .version("0.1.0");
 
 prog.command("init")
   .description("Creates migration directory complete with config.js and first migration")
