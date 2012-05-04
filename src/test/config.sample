@@ -1,11 +1,17 @@
+// To migrate a schema based on an environment, run
+//
+//  NODE_ENV=development schema up
 module.exports = {
   development: {
-    postgresql: { connectionString: "tcp://user_dev:dev@devvm/db_dev" }
+    mysql: { user: 'userdev', password: 'dev', database: 'dbdev' }
   },
+
   test: {
-    postgresql: { connectionString: "tcp://user_dev:dev@devvm/db_dev" }
+    mysql: { user: 'userdev', password: 'dev', database: 'dbdev' }
   },
+
+
   production: {
-    postgresql: { connectionString: "tcp://user_dev:dev@devvm/db_dev" }
+    mysql: { user: 'userdev', password: 'dev', database: 'dbdev' }
   }
-}
+};
