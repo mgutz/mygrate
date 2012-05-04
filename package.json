@@ -1,8 +1,8 @@
 {
   "author": "Mario Gutierrez <mario@mgutz.com>",
-  "name": "schema",
+  "name": "mygrate",
   "version": "0.0.1",
-  "bin": "./bin/schema",
+  "bin": "./bin/mygrate",
   "dependencies": {
     "async": "*",
     "commander": "*",

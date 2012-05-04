@@ -13,7 +13,7 @@ prog.command("init")
 prog.command("gen")
   .description(
     "Generate new migration.\n" +
-    "  schema gen add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
+    "  mygrate gen add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
     )
   .action(commands.generate);
 
@@ -24,9 +24,9 @@ prog.command("up")
 prog.command("down")
   .description(
     "Undo {COUNT|VERSION|all} migrations.\n" +
-    "  schema down 3                    rollback 3 migrations\n" +
-    "  schema down 201204261323-people  rollback to before specified version\n" +
-    "  schema down all                  rollback all\n"
+    "  mygrate down 3                    rollback 3 migrations\n" +
+    "  mygrate down 201204261323-people  rollback to before specified version\n" +
+    "  mygrate down all                  rollback all\n"
   )
   .action(commands.migrateDown);
 

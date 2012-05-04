@@ -1,6 +1,6 @@
-# Schema
+# mygrate
 
-Schema migrations for MySQL and PostgreSQL database.
+Database migrations for MySQL and PostgreSQL database.
 
 This utility uses SQL file for migrations that, if need be, can be run
 by `mysql` or `psql` command line utilities. It does not try to be cute.
@@ -8,13 +8,11 @@ by `mysql` or `psql` command line utilities. It does not try to be cute.
 
 ## Installation
 
-    npm install -g schema
+    npm install -g mygrate
 
-To run migrations for MySQL
+Depending on your database, you will need to install either
 
     npm install mysql
-
-To run migrations for PostgreSQL
 
     npm install pg
 
@@ -24,11 +22,11 @@ To run migrations for PostgreSQL
 To create `migrations` directory and `config.js` sample which must be
 edited for your database.
 
-    schema init
+    mygrate init
 
 To create a migration script.
 
-    schema gen add-tables
+    mygrate gen add-tables
 
 That command creates `migration/TIMESTAMP-add-tables/{down,up}.sql`. Edit
 these scripts as needed.
@@ -36,17 +34,17 @@ these scripts as needed.
 
 To run migrations, do any of the following
 
-    schema up                           # migrate all scripts
-    schema down                         # down 1 migration
-    schema down 2                       # down 2 migrations
-    schema down all                     # down all migrations
-    schema down TIMESTAMP-some-script   # down to migration before this one
+    mygrate up                           # migrate all scripts
+    mygrate down                         # down 1 migration
+    mygrate down 2                       # down 2 migrations
+    mygrate down all                     # down all migrations
+    mygrate down TIMESTAMP-some-script   # down to migration before this one
 
 To view migrations applied to the database
 
-    schema
+    mygrate
 
 To target specific environments, `development` is default
 
-    NODE_ENV=test schema up
+    NODE_ENV=test mygrate up
 
