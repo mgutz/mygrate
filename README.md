@@ -2,7 +2,7 @@
 
 Database migrations for MySQL and PostgreSQL database.
 
-This utility uses SQL file for migrations that, if need be, can be run
+This utility uses SQL files for migrations that, if need be, can be run
 by `mysql` or `psql` command line utilities. It does not try to be cute.
 
 

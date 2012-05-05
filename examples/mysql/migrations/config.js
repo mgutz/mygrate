@@ -8,7 +8,7 @@ module.exports = {
     }
   },
   test: {
-    postgresql: {
+    mysql: {
       host: "localhost",
       database: "dbdev",
       user: "userdev",
@@ -16,7 +16,7 @@ module.exports = {
     }
   },
   production: {
-    postgresql: {
+    mysql: {
       host: "localhost",
       database: "dbdev",
       user: "userdev",

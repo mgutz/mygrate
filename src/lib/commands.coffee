@@ -141,22 +141,21 @@ Commands =
           versions = dirs
 
         if versions.length > 0
-          async.forEachSeries versions, (version, cb) ->
-            up = readMigrationFile(version, "up")
-            down = readMigrationFile(version, "down")
+          migrateUp = (version, cb) ->
+            filename = migrationFile(version, "up")
+            schema.execFile filename, (err) ->
+              return cb("Up migrations/#{version}: #{err}") if err
 
-            schema.add version, up, down, (err) ->
-              return cb(err) if err
+              up = readMigrationFile(version, "up")
+              down = readMigrationFile(version, "down")
+              schema.add version, up, down, (err) ->
+                return cb(err) if err
 
+                console.log "Up migrations/#{version}"
+                cb null
 
-              filename = migrationFile(version, "up")
-              schema.execFile filename, (err) ->
-                if err
-                  cb "Up migrations/#{version}: #{err}"
-                else
-                  console.log "Up migrations/#{version}"
-                  cb null
-          , cb
+          async.forEachSeries versions, migrateUp, cb
+
         else
           msg = "Nothing to run."
           if lastMigration?.version
