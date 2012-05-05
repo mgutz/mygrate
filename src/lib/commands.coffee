@@ -3,6 +3,8 @@ Path = require("path")
 prog = require("commander")
 async = require("async")
 
+cwd = process.cwd()
+
 dbInterface = ->
   if !Path.existsSync("migrations")
     console.error("migrations directory not found")
@@ -65,17 +67,19 @@ readMigrationFile = (migration, which) ->
   else
     ""
 
-
+# Executes a down migration for each migration in `migrations`
 down = (schema, migrations, cb) ->
-  async.forEachSeries migrations, (version, cb) ->
-    schema.execFile migrationFile(version, "down"), (err) ->
+  migrate = (version, cb) ->
+    filename = migrationFile(version, "down")
+    schema.execFile filename, (err) ->
       return cb("Down migrations/#{version}: #{err}") if err
 
       schema.remove version, (err) ->
         return cb("Down migrations/#{version}: #{err}") if err
         console.log "Down migrations/#{version}"
         cb null
-  , cb
+
+  async.forEachSeries migrations, migrate, cb
 
 
 ## COMMANDS
@@ -118,7 +122,7 @@ Commands =
     dirs = null
     lastMigration = null
 
-    async.series
+    async.series {
       ensureSchema: (cb) ->
         schema.init cb
 
@@ -162,10 +166,11 @@ Commands =
             msg += " Last recorded migration: migrations/"+lastMigration.version
           console.log msg
           cb null
-
-    , (err) ->
+    }, (err) ->
       if err
         console.error err
+      else
+        console.log "OK"
       process.exit()
 
 
@@ -179,7 +184,7 @@ Commands =
     dirs = null
     lastMigration = null
 
-    async.series
+    async.series {
       getLastMigration: (cb) ->
         schema.last (err, migration) ->
           return cb(err) if err
@@ -233,11 +238,11 @@ Commands =
               down schema, versions, cb
             else
               cb null
-
-
-    , (err) ->
+    }, (err) -> # end of async.series
       if err
         console.error err
+      else
+        console.log "OK"
       process.exit()
 
 

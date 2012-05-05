@@ -1,3 +1,4 @@
+Path = require("path")
 Pg = require("pg")
 Utils = require("./utils")
 
@@ -27,8 +28,9 @@ class Postgresql
   execFile: (filename, cb) ->
     port = @config.port || 5432
     host = @config.host || "localhost"
-    command = "psql -U #{@config.user} -d #{@config.database} -h #{host} -p #{port} --file=#{filename}"
-    Utils.exec command, cb
+    command = "psql"
+    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}"]
+    Utils.pushExec command, args, Path.dirname(filename), cb
 
 
   init: (cb) ->

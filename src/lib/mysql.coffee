@@ -1,5 +1,6 @@
 mysql = require("mysql")
 Utils = require("./utils")
+Path = require("path")
 
 
 class Mysql
@@ -20,9 +21,9 @@ class Mysql
   execFile: (filename, cb) ->
     port = @config.port || 3306
     host = @config.host || "localhost"
-    command = "mysql -u #{@config.user} -p#{@config.password} -D "+@config.database+" -h "+host+" -P "+port+" -e 'source #{filename}'"
-    Utils.exec command, cb
-
+    command = "mysql"
+    args = ["-u#{@config.user}", "-p#{@config.password}", "-D#{@config.database}", "-h#{host}", "-P#{port}", "-e", "source #{filename}"]
+    Utils.pushExec command, args, Path.dirname(filename), cb
 
   init: (cb) ->
     sql = """
@@ -32,7 +33,7 @@ class Mysql
           down text,
           created_at timestamp default current_timestamp
         );
-      """
+    """
     @exec sql, cb
 
 
