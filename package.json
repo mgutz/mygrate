@@ -1,7 +1,7 @@
 {
   "author": "Mario Gutierrez <mario@mgutz.com>",
   "name": "mygrate",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "bin": "./bin/mygrate",
   "dependencies": {
     "async": "*",
