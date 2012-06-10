@@ -18,7 +18,7 @@ exports.pushExec = (command, args, wd, cb) ->
     cb = wd
     wd = null
 
-  if wd  
+  if wd
     cwd = process.cwd()
     process.chdir wd
 
