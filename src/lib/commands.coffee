@@ -8,7 +8,7 @@ cwd = process.cwd()
 dbInterface = ->
   if !Path.existsSync("migrations")
     console.error("migrations directory not found")
-    process.exit()
+    process.exit 1
 
   env = process.env.NODE_ENV || "development"
   config = require(process.cwd()+"/migrations/config")[env]
@@ -92,11 +92,11 @@ Commands =
   generate: (suffix, options) =>
     if !Path.existsSync(Path.resolve("migrations"))
       console.error "ERROR migrations directory not found. Try `schema init`"
-      process.exit()
+      process.exit 1
 
     if typeof suffix isnt "string"
       console.error "Migration identifier missing"
-      process.exit()
+      process.exit 1
 
     filename = timestamp()
     if typeof suffix is "string"
@@ -169,9 +169,10 @@ Commands =
     }, (err) ->
       if err
         console.error err
+        process.exit 1
       else
         console.log "OK"
-      process.exit()
+        process.exit()
 
 
   # Migrates down count versions or before a specific version.
@@ -241,16 +242,19 @@ Commands =
     }, (err) -> # end of async.series
       if err
         console.error err
+        process.exit 1
       else
         console.log "OK"
-      process.exit()
+        process.exit()
 
 
   # List a history of all executed migrations.
   history: =>
     {connectionInfo, schema} = dbInterface()
     schema.all (err, migrations) ->
-      return cb(err) if err
+      if err
+        console.error err
+        process.exit 1
       console.log "History connection="+JSON.stringify(connectionInfo)
       if migrations.length < 1
         console.log "0 migrations found"
