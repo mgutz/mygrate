@@ -26,7 +26,7 @@ edited for your database.
 
 To create a migration script.
 
-    mygrate gen add-tables
+    mygrate new add-tables
 
 That command creates `migration/TIMESTAMP-add-tables/{down,up}.sql`. Edit
 these scripts as needed.

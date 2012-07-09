@@ -10,7 +10,7 @@ prog.command("init")
   .description("Creates migration directory complete with config.js and first migration")
   .action(commands.init);
 
-prog.command("gen")
+prog.command("new")
   .description(
     "Generate new migration.\n" +
     "  mygrate gen add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"

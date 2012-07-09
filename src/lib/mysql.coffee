@@ -28,7 +28,7 @@ class Mysql
   init: (cb) ->
     sql = """
         create table if not exists schema_migrations(
-          version varchar(256) not null primary key,
+          version varchar(128) not null primary key,
           up text,
           down text,
           created_at timestamp default current_timestamp

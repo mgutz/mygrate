@@ -3,10 +3,12 @@ Path = require("path")
 prog = require("commander")
 async = require("async")
 
+existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
+
 cwd = process.cwd()
 
 dbInterface = ->
-  if !Path.existsSync("migrations")
+  if !existsSync("migrations")
     console.error("migrations directory not found")
     process.exit 1
 
@@ -25,7 +27,7 @@ dbInterface = ->
   }
 
 
-pad2 = (num) -> if num < 9 then "0" + num else num
+pad2 = (num) -> if num < 10 then "0" + num else num
 
 timestamp = (date=new Date(), separator="") ->
   [
@@ -38,10 +40,10 @@ timestamp = (date=new Date(), separator="") ->
 
 
 initMigrationsDir = ->
-  unless Path.existsSync("./migrations")
+  unless existsSync("./migrations")
     Fs.mkdirSync("./migrations")
 
-  unless Path.existsSync("./migrations/config.js")
+  unless existsSync("./migrations/config.js")
     sample = Fs.readFileSync(__dirname+"/../src/test/config.sample", "utf8")
     Fs.writeFileSync "./migrations/config.js", sample
     console.log "Created sample configuration. Edit migrations/config.js."
@@ -62,7 +64,7 @@ migrationFile = (version, which) ->
 
 readMigrationFile = (migration, which) ->
   filename = migrationFile(migration, which)
-  if Path.existsSync(filename)
+  if existsSync(filename)
     Fs.readFileSync filename, "utf8"
   else
     ""
@@ -82,6 +84,11 @@ down = (schema, migrations, cb) ->
   async.forEachSeries migrations, migrate, cb
 
 
+forceDown = (schema, version, cb) ->
+    filename = migrationFile(version, "down")
+    schema.execFile filename, cb
+
+
 ## COMMANDS
 Commands =
   # Generates a migration with optional `suffix`
@@ -90,8 +97,8 @@ Commands =
   #   generate 'add-post'   // creates `migrations/TIME-add-post/up.sql`
   #                         // and `migrations/TIME-add-post/down.sql`
   generate: (suffix, options) =>
-    if !Path.existsSync(Path.resolve("migrations"))
-      console.error "ERROR migrations directory not found. Try `schema init`"
+    if !existsSync(Path.resolve("migrations"))
+      console.error "ERROR migrations directory not found. Try `mygrate init`"
       process.exit 1
 
     if typeof suffix isnt "string"
@@ -103,7 +110,7 @@ Commands =
       filename += "-"+suffix
 
     path = "./migrations/"+filename
-    unless Path.existsSync(path)
+    unless existsSync(path)
       Fs.mkdirSync path
       Fs.writeFileSync path+"/up.sql", ""
       Fs.writeFileSync path+"/down.sql", ""
@@ -168,9 +175,13 @@ Commands =
           cb null
     }, (err) ->
       if err
+        errFile = err.toString().match(/migrations\/([^:]+):/)[1]
+        Fs.writeFileSync("migrations/errfile", errFile)
+        console.error "FILE", errFile
         console.error err
         process.exit 1
       else
+        Fs.unlinkSync("migrations/errfile") if existsSync("migrations/errfile")
         console.log "OK"
         process.exit()
 
@@ -201,6 +212,17 @@ Commands =
       run: (cb) ->
         schema.all (err, migrations) ->
           return cb(err) if err
+
+          if countOrVersion == "1"
+            if existsSync("migrations/errfile")
+              version = Fs.readFileSync("migrations/errfile", "utf8")
+              console.log "Trying to recover from #{version} error"
+              return forceDown schema, version, (err) ->
+                if !err
+                  Fs.unlinkSync("migrations/errfile")
+                return cb(err)
+
+
           if migrations.length is 0
             console.log "0 migrations found"
             return cb(null)

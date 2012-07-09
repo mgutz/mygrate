@@ -3,7 +3,7 @@ CREATE TABLE users(
    userName varchar(255),
    firstName varchar(255),
    lastName varchar(255),
-   createdAt timestamp default current_timestamp
+   createdAt datetime
 );
 
 CREATE TABLE posts (
@@ -12,8 +12,8 @@ CREATE TABLE posts (
   blurb character varying(255),
   body text NOT NULL,
   published boolean,
-  created_at date,
-  updated_at date,
+  created_at datetime,
+  updated_at datetime,
   CONSTRAINT posts_pkey PRIMARY KEY (id)
 );
 
@@ -21,7 +21,7 @@ CREATE TABLE comments (
   id integer NOT NULL,
   post_id integer NOT NULL,
   comment text NOT NULL,
-  created_at date,
+  created_at datetime,
   CONSTRAINT comments_pkey PRIMARY KEY (id)
 );
 
