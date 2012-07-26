@@ -175,9 +175,12 @@ Commands =
           cb null
     }, (err) ->
       if err
-        errFile = err.toString().match(/migrations\/([^:]+):/)[1]
-        Fs.writeFileSync("migrations/errfile", errFile)
-        console.error "FILE", errFile
+        # try to save error file for `down` command
+        errFile = err.toString().match(/migrations\/([^:]+):/)
+        if errFile
+          errFile = errFile[1]
+          Fs.writeFileSync("migrations/errfile", errFile)
+          console.error "FILE", errFile
         console.error err
         process.exit 1
       else
