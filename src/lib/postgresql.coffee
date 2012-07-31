@@ -1,3 +1,4 @@
+Fs = require("fs")
 Path = require("path")
 Pg = require("pg")
 Utils = require("./utils")
@@ -6,6 +7,7 @@ class Postgresql
   constructor: (@config) ->
     @config.host = "localhost" unless @config.host
     @config.port = 5432 unless @config.port
+    @config.useDriver = false unless @config.useDriver
 
   using: (cb) ->
     connectionString = "tcp://"
@@ -26,12 +28,23 @@ class Postgresql
         cb.apply null, Array.prototype.slice.apply(arguments)
 
   execFile: (filename, cb) ->
+    if @config.useDriver
+      @withDriver filename, cb
+    else
+      @withPsql filename, cb
+
+  withPsql: (filename, cb) ->
     port = @config.port || 5432
     host = @config.host || "localhost"
     command = "psql"
     args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}"]
     Utils.pushExec command, args, Path.dirname(filename), cb
 
+  withDriver: (filename, cb) ->
+    Fs.readFile filename, 'utf8', (err, data) =>
+      return cb(err) if err
+
+      @exec data, cb
 
   init: (cb) ->
     sql = """
