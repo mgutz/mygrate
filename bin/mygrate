@@ -13,7 +13,7 @@ prog.command("init")
 prog.command("new")
   .description(
     "Generate new migration.\n" +
-    "  mygrate gen add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
+    "  mygrate new add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
     )
   .action(commands.generate);
 
@@ -33,6 +33,13 @@ prog.command("down")
 prog.command("history")
   .description("Show deployed migrations")
   .action(commands.history);
+
+
+prog.command("createdb")
+  .description("Create database from config.js based on $NODE_ENV")
+  .action(commands.createDatabase);
+
+
 
 prog.parse(process.argv);
 

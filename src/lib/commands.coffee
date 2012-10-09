@@ -290,4 +290,9 @@ Commands =
       process.exit()
 
 
+  createDatabase: =>
+    {schema} = dbInterface()
+    schema.createDatabase()
+
+
 module.exports = Commands

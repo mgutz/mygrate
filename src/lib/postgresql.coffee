@@ -1,36 +1,58 @@
 Path = require("path")
+Fs = require("fs")
 Pg = require("pg")
 Utils = require("./utils")
+Prompt = require("prompt")
+async = require("async")
+
+Prompt.message = ""
+Prompt.delimiter = ""
 
 class Postgresql
   constructor: (@config) ->
-    @config.host = "localhost" unless @config.host
-    @config.port = 5432 unless @config.port
+    @config.host = 'localhost' unless @config.host?
+    @config.port = 5432 unless @config.port?
 
-  using: (cb) ->
+  using: (config, cb) ->
+    if arguments.length == 1
+      cb = config
+      config = @config
+
     connectionString = "tcp://"
-    connectionString += @config.user
-    connectionString += ":"+@config.password if @config.password
-    connectionString += "@"+@config.host 
-    connectionString += ":"+@config.port
-    connectionString += "/"+@config.database
+    connectionString += config.user
+    connectionString += ":"+config.password if config.password
+    connectionString += "@"+config.host
+    connectionString += ":"+config.port if config.port
+    connectionString += "/"+config.database if config.database
 
-    Pg.connect connectionString, cb
+    Pg.connect connectionString, (err, client) ->
+      if (err)
+        console.error err
+      cb err, client
 
 
   exec: (sql, cb) ->
     @using (err, client) ->
       return cb(err) if err
 
-      client.query sql, ->
-        cb.apply null, Array.prototype.slice.apply(arguments)
+      client.query sql, cb
+
 
   execFile: (filename, cb) ->
-    port = @config.port || 5432
-    host = @config.host || "localhost"
-    command = "psql"
-    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}"]
-    Utils.pushExec command, args, Path.dirname(filename), cb
+    me = @
+    Fs.readFile filename, (err, script) ->
+      # Wrap script in DO to properly handle multiple statements, which
+      # works intermittenly. Once a prepared statement is used, multiple
+      # statements do not work as expected. By wrapping it in DO, it becomes
+      # a single statement.
+      script = """
+DO $$
+BEGIN
+#{script}
+END $$;
+"""
+      return cb(err) if err
+      me.exec script, cb
 
 
   init: (cb) ->
@@ -85,6 +107,57 @@ class Postgresql
     @using (err, client) ->
       client.query sql, [version], (err) ->
         cb err
+
+
+  # Creates the deploy specific environemnt database from migrations/config.js
+  # using a root user instead of the user defined in config.js.
+  #
+  # @param {String} deployEnv
+  createDatabase: ->
+    Prompt.start()
+
+    config = @config
+    using = @using
+
+
+    promptConfig =
+      properties:
+        user:
+          default: "postgres"
+
+        password:
+          hidden: true
+
+    Prompt.get promptConfig, (err, result) ->
+      user = result.user
+      password = result.password
+
+      statements = [
+          "drop database if exists #{config.database};"
+          "drop user if exists #{config.user};"
+          "create user #{config.user} password '#{config.password}';"
+          "create database #{config.database} owner #{config.user};"
+      ]
+
+      execRootSql = (sql, cb) ->
+        rootConfig =
+          user: user
+          password: password
+          host: config.host
+          port: config.port
+          database: "postgres"
+
+        using rootConfig, (err, client) ->
+          client.query sql, cb
+
+
+      async.forEachSeries statements, execRootSql, (err) ->
+        if (err)
+          console.error(err)
+          process.exit(1)
+        else
+          console.log "OK"
+          process.exit(0)
 
 module.exports = Postgresql
 

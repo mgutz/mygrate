@@ -48,3 +48,6 @@ To target specific environments, `development` is default
 
     NODE_ENV=test mygrate up
 
+## Compiling
+
+    make compile
