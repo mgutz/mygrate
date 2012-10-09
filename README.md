@@ -19,10 +19,16 @@ Depending on your database, you will need to install either
 
 ## Running
 
-To create `migrations` directory and `config.js` sample which must be
+To create `migrations` directory and `config.js` sample which MUST BE
 edited for your database.
 
     mygrate init
+
+To create the database based `config.js`. You will be prompted for
+root user and password.
+
+    mygrate createdb                    # creates development database
+    NODE_ENV=test mygrate createdb      # creates test database
 
 To create a migration script.
 
