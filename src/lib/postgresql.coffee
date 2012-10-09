@@ -156,6 +156,13 @@ END $$;
           console.error(err)
           process.exit(1)
         else
+          console.log """created
+  database: #{config.database}
+  user: #{config.user}
+  password: #{config.password}
+  host: #{config.host}
+  port: #{config.port}
+"""
           console.log "OK"
           process.exit(0)
 
