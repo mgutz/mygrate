@@ -41,6 +41,9 @@ prog.command("createdb")
   .description("Create database from config.js based on $NODE_ENV")
   .action(commands.createDatabase);
 
+prog.command("file")
+  .description("Execute SQL script in file")
+  .action(commands.execFile);
 
 prog.parse(process.argv);
 

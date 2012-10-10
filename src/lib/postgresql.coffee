@@ -2,11 +2,10 @@ Path = require("path")
 Fs = require("fs")
 Pg = require("pg")
 Utils = require("./utils")
-async = require("async")
+Async = require("async")
 Commander = require("commander")
 Prompt = require("prompt")
 Prompt.message = ''
-
 
 
 class Postgresql
@@ -36,24 +35,50 @@ class Postgresql
     @using (err, client) ->
       return cb(err) if err
 
-      client.query sql, cb
+      client.query sql, (err, result) ->
+        if err
+          console.error(err)
+        cb err, result
 
 
-  execFile: (filename, cb) ->
-    me = @
-    Fs.readFile filename, (err, script) ->
+  toSingleStatement: (sql) ->
+    if sql.match(/^do\s*\$\$/i)
+      sql
+    else
       # Wrap script in DO to properly handle multiple statements, which
       # works intermittenly. Once a prepared statement is used, multiple
       # statements do not work as expected. By wrapping it in DO, it becomes
       # a single statement.
-      script = """
+       """
 DO $$
 BEGIN
-#{script}
+#{sql}
 END $$;
 """
+
+  execFileCLI: (filename, cb) ->
+    port = @config.port || 5432
+    host = @config.host || "localhost"
+    command = "psql"
+    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}"]
+    Utils.pushExec command, args, Path.dirname(filename), cb
+
+
+  # Not too confident using the driver for large scripts. The error
+  # information returned is not as helpful as returned by the command
+  # line utility. The line number is always off. Moreover, to reliably
+  # run multiple statements the script must be run within a `DO$$ ... END$$;`
+  execFileDriver: (filename, cb) ->
+    me = @
+    Fs.readFile filename, 'utf8', (err, script) ->
+
+      script = me.toSingleStatement(script)
       return cb(err) if err
       me.exec script, cb
+
+
+  execFile: (args...) ->
+    @execFileCLI args...
 
 
   init: (cb) ->
@@ -148,7 +173,7 @@ END $$;
           client.query sql, cb
 
 
-      async.forEachSeries statements, execRootSql, (err) ->
+      Async.forEachSeries statements, execRootSql, (err) ->
         if (err)
           console.error(err)
           process.exit(1)

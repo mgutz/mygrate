@@ -7,6 +7,14 @@ existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
 
 cwd = process.cwd()
 
+
+errHandler = (err) ->
+  if err
+    console.error(err)
+  else
+    console.log "OK"
+    process.exit(1)
+
 dbInterface = ->
   if !existsSync("migrations")
     console.error("migrations directory not found")
@@ -39,20 +47,15 @@ timestamp = (date=new Date(), separator="") ->
   ].join(separator)
 
 
-initMigrationsDir = (dbProduct) ->
-  dbProduct = 'postgresql' unless typeof dbProduct == 'string'
-
-  if ['mysql', 'postgresql'].indexOf(dbProduct) < 0
-    dbProduct = 'postgresql'
-
+initMigrationsDir = (dbMake) ->
   unless existsSync("./migrations")
     Fs.mkdirSync("./migrations")
 
   unless existsSync("./migrations/config.js")
-    absPath = Path.resolve(__dirname+"/../examples/#{dbProduct}/migrations/config.js")
+    absPath = Path.resolve(__dirname+"/../examples/#{dbMake}/migrations/config.js")
     sample = Fs.readFileSync(absPath, "utf8")
     Fs.writeFileSync "./migrations/config.js", sample
-    console.log "Created #{dbProduct} sample configuration. Edit migrations/config.js."
+    console.log "Created #{dbMake} sample configuration. Edit migrations/config.js."
 
 
 getSubDirs = (dirname, cb) ->
@@ -124,9 +127,15 @@ Commands =
 
 
   # Initializes migrations directory with sample config.js
-  init: (dbProduct='postgresql') =>
-    initMigrationsDir(dbProduct)
-    Commands.generate("init")
+  init: (dbMake) =>
+    if typeof dbMake != 'string'
+      dbMake = "postgresql"
+
+    if ['mysql', 'postgresql'].indexOf(dbMake) < 0
+      dbMake = "postgresql"
+
+    initMigrationsDir dbMake
+    Commands.generate "init"
 
 
   # Runs all `up` migrations not yet executed on the database.
@@ -300,5 +309,12 @@ Commands =
     {schema} = dbInterface()
     schema.createDatabase()
 
+
+  execFile: (filename) =>
+    if typeof filename != 'string'
+      return errHandler('Filename required')
+
+    {schema} = dbInterface()
+    schema.execFile filename, errHandler
 
 module.exports = Commands
