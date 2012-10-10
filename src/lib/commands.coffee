@@ -314,6 +314,8 @@ Commands =
     if typeof filename != 'string'
       return errHandler('Filename required')
 
+    filename = Path.resolve(filename)
+
     {schema} = dbInterface()
     schema.execFile filename, errHandler
 
