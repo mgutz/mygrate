@@ -39,14 +39,20 @@ timestamp = (date=new Date(), separator="") ->
   ].join(separator)
 
 
-initMigrationsDir = ->
+initMigrationsDir = (dbProduct) ->
+  dbProduct = 'postgresql' unless typeof dbProduct == 'string'
+
+  if ['mysql', 'postgresql'].indexOf(dbProduct) < 0
+    dbProduct = 'postgresql'
+
   unless existsSync("./migrations")
     Fs.mkdirSync("./migrations")
 
   unless existsSync("./migrations/config.js")
-    sample = Fs.readFileSync(__dirname+"/../src/test/config.sample", "utf8")
+    absPath = Path.resolve(__dirname+"/../examples/#{dbProduct}/migrations/config.js")
+    sample = Fs.readFileSync(absPath, "utf8")
     Fs.writeFileSync "./migrations/config.js", sample
-    console.log "Created sample configuration. Edit migrations/config.js."
+    console.log "Created #{dbProduct} sample configuration. Edit migrations/config.js."
 
 
 getSubDirs = (dirname, cb) ->
@@ -118,8 +124,8 @@ Commands =
 
 
   # Initializes migrations directory with sample config.js
-  init: =>
-    initMigrationsDir()
+  init: (dbProduct='postgresql') =>
+    initMigrationsDir(dbProduct)
     Commands.generate("init")
 
 

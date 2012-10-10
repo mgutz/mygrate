@@ -4,7 +4,8 @@ module.exports = {
       host: "localhost",
       database: "dbdev",
       user: "userdev",
-      password: "dev"
+      password: "dev",
+      port: 3306
     }
   },
   test: {
@@ -12,7 +13,8 @@ module.exports = {
       host: "localhost",
       database: "dbdev",
       user: "userdev",
-      password: "dev"
+      password: "dev",
+      port: 3306
     }
   },
   production: {
@@ -20,7 +22,8 @@ module.exports = {
       host: "localhost",
       database: "dbdev",
       user: "userdev",
-      password: "dev"
+      password: "dev",
+      port: 3306
     }
   }
 };

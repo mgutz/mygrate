@@ -2,11 +2,8 @@ Path = require("path")
 Fs = require("fs")
 Pg = require("pg")
 Utils = require("./utils")
-Prompt = require("prompt")
 async = require("async")
-
-Prompt.message = ""
-Prompt.delimiter = ""
+Commander = require("commander")
 
 class Postgresql
   constructor: (@config) ->
@@ -114,57 +111,46 @@ END $$;
   #
   # @param {String} deployEnv
   createDatabase: ->
-    Prompt.start()
-
     config = @config
     using = @using
 
+    Commander.prompt 'root user (postgres): ', (user='postgres') ->
+      Commander.password 'password: ', (password) ->
+        process.stdin.destroy()
 
-    promptConfig =
-      properties:
-        user:
-          default: "postgres"
+        statements = [
+            "drop database if exists #{config.database};"
+            "drop user if exists #{config.user};"
+            "create user #{config.user} password '#{config.password}';"
+            "create database #{config.database} owner #{config.user};"
+        ]
 
-        password:
-          hidden: true
+        execRootSql = (sql, cb) ->
+          rootConfig =
+            user: user
+            password: password
+            host: config.host
+            port: config.port
+            database: "postgres"
 
-    Prompt.get promptConfig, (err, result) ->
-      user = result.user
-      password = result.password
-
-      statements = [
-          "drop database if exists #{config.database};"
-          "drop user if exists #{config.user};"
-          "create user #{config.user} password '#{config.password}';"
-          "create database #{config.database} owner #{config.user};"
-      ]
-
-      execRootSql = (sql, cb) ->
-        rootConfig =
-          user: user
-          password: password
-          host: config.host
-          port: config.port
-          database: "postgres"
-
-        using rootConfig, (err, client) ->
-          client.query sql, cb
+          using rootConfig, (err, client) ->
+            client.query sql, cb
 
 
-      async.forEachSeries statements, execRootSql, (err) ->
-        if (err)
-          console.error(err)
-          process.exit(1)
-        else
-          console.log """created
-  database: #{config.database}
-  user: #{config.user}
-  password: #{config.password}
-  host: #{config.host}
-  port: #{config.port}
-"""
-          console.log "OK"
-          process.exit(0)
+        async.forEachSeries statements, execRootSql, (err) ->
+          if (err)
+            console.error(err)
+            process.exit(1)
+          else
+            console.log """Created
+    database: #{config.database}
+    user: #{config.user}
+    password: #{config.password}
+    host: #{config.host}
+    port: #{config.port}
+  """
+            console.log "OK"
+            process.exit(0)
 
 module.exports = Postgresql
 
