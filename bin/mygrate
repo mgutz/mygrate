@@ -7,15 +7,16 @@ prog
   .version("0.1.0");
 
 prog.command("init")
-  .description("Creates migration directory complete with config.js and first migration.\n"
-               + "  mygrate init {postgresql|mysql}"
+  .description(
+    "Creates migration directory complete with config.js and first migration.\n" +
+    "  mygrate init {postgresql|mysql}"
   )
   .action(commands.init);
 
 prog.command("new")
   .description(
     "Generate new migration.\n" +
-    "  mygrate new add-tags              creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
+    "  mygrate new add-tags   creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
     )
   .action(commands.generate);
 
@@ -26,9 +27,9 @@ prog.command("up")
 prog.command("down")
   .description(
     "down {COUNT|VERSION|all} migrations.\n" +
-    "  mygrate down 3                    rollback 3 migrations\n" +
-    "  mygrate down 201204261323-people  rollback to before specified version\n" +
-    "  mygrate down all                  rollback all\n"
+    "  mygrate down 3         rollback 3 migrations\n" +
+    "  mygrate down 201204261323-people  rollback before specified version\n" +
+    "  mygrate down all       rollback all\n"
   )
   .action(commands.migrateDown);
 
