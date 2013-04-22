@@ -25,17 +25,17 @@ class Postgresql
     connectionString += ":"+config.port if config.port
     connectionString += "/"+config.database if config.database
 
-    Pg.connect connectionString, (err, client) ->
-      if (err)
-        console.error err
-      cb err, client
+    console.log
+
+    Pg.connect config, cb
 
 
   exec: (sql, cb) ->
-    @using (err, client) ->
+    @using (err, client, release) ->
       return cb(err) if err
 
       client.query sql, (err, result) ->
+        release()
         if err
           console.error(err)
         cb err, result
@@ -145,14 +145,16 @@ END $$;
     config = @config
     using = @using
 
-
     prompts = [
       { name: 'user', description: 'root user', default: 'postgres' }
       { name: 'password', hidden: true}
+      { name: 'host', default: 'localhost'}
+      { name: 'port', default: '5432'}
     ]
 
     Prompt.get prompts, (err, result) ->
-      {user, password} = result
+      {user, password, host, port} = result
+      password = null if password.trim().length == 0
 
       statements = [
           "drop database if exists #{config.database};"
@@ -165,11 +167,12 @@ END $$;
         rootConfig =
           user: user
           password: password
-          host: config.host
-          port: config.port
+          host: host
+          port: port
           database: "postgres"
 
         using rootConfig, (err, client) ->
+          console.error(err) if err
           client.query sql, cb
 
 
