@@ -3,20 +3,43 @@
 var prog = require("commander")
   , commands = require("../lib/commands");
 
+var pkg = require('../package.json');
+
 prog
-  .version("0.1.0");
+  .version(pkg.version);
+
+prog.command("createdb")
+  .description("Create database from config.js and $NODE_ENV")
+  .action(commands.createDatabase);
+
+prog.command("down")
+  .description(
+    "Undo {COUNT|VERSION|all} migrations.\n" +
+    "  mygrate down 3       rollback 3 migrations\n" +
+    "  mygrate down 201204261323-people rollback before specified version\n" +
+    "  mygrate down all     rollback all\n"
+  )
+  .action(commands.migrateDown);
+
+prog.command("file")
+  .description("Execute SQL script in file")
+  .action(commands.execFile);
+
+prog.command("history")
+  .description("Show deployed migrations")
+  .action(commands.history);
 
 prog.command("init")
   .description(
-    "Creates migration directory complete with config.js and first migration.\n" +
-    "  mygrate init {postgresql|mysql}"
+    "Creates migration directory with starter scripts.\n" +
+    "  mygrate init {postgresql|mysql}\n"
   )
   .action(commands.init);
 
 prog.command("new")
   .description(
     "Generate new migration.\n" +
-    "  mygrate new add-tags   creates migrations/TIMESTAMP-add-tags/{up,down}.sql\n"
+    "  mygrate new add-tags creates migrations/TIMESTAMP-add-tags/*.sql\n"
     )
   .action(commands.generate);
 
@@ -24,30 +47,7 @@ prog.command("up")
   .description("Execute new migrations.")
   .action(commands.migrateUp);
 
-prog.command("down")
-  .description(
-    "down {COUNT|VERSION|all} migrations.\n" +
-    "  mygrate down 3         rollback 3 migrations\n" +
-    "  mygrate down 201204261323-people  rollback before specified version\n" +
-    "  mygrate down all       rollback all\n"
-  )
-  .action(commands.migrateDown);
-
-prog.command("history")
-  .description("Show deployed migrations")
-  .action(commands.history);
-
-
-prog.command("createdb")
-  .description("Create database from config.js based on $NODE_ENV")
-  .action(commands.createDatabase);
-
-prog.command("file")
-  .description("Execute SQL script in file")
-  .action(commands.execFile);
-
 prog.parse(process.argv);
-
 
 // account for ['node', 'script']
 if (process.argv.length <= 2) {
