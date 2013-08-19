@@ -15,9 +15,12 @@ prog.command("createdb")
 prog.command("down")
   .description(
     "Undo {COUNT|VERSION|all} migrations.\n" +
-    "  mygrate down 3       rollback 3 migrations\n" +
-    "  mygrate down 201204261323-people rollback before specified version\n" +
-    "  mygrate down all     rollback all\n"
+    "\t# rollback 3 migrations\n" +
+    "\tmygrate down 3\n" +
+    "\t# rollback before specified version\n" +
+    "\tmygrate down 201204261323-people\n" +
+    "\t# rollback all\n" +
+    "\tmygrate down all"
   )
   .action(commands.migrateDown);
 
@@ -31,15 +34,16 @@ prog.command("history")
 
 prog.command("init")
   .description(
-    "Creates migration directory with starter scripts.\n" +
-    "  mygrate init {postgresql|mysql}\n"
+    "Creates migration directory with skeleton config.\n" +
+    "\tmygrate init {postgresql|mysql}"
   )
   .action(commands.init);
 
 prog.command("new")
   .description(
     "Generate new migration.\n" +
-    "  mygrate new add-tags creates migrations/TIMESTAMP-add-tags/*.sql\n"
+    "\t#creates migrations/TIMESTAMP-add-tags/{down,up}.sql\n" +
+    "\tmygrate new add-tags "
     )
   .action(commands.generate);
 
