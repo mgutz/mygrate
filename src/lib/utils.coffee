@@ -1,28 +1,7 @@
-_ = require("underscore")
-CP = require("child_process")
-
-Util  = require('util')
 spawn = require('child_process').spawn
 
-exports.exec = (command, cb) ->
-  #console.log command
-  CP.exec command, (err, stdout, stderr) ->
-    console.log("STDOUT", stdout) unless _.isEmpty(stdout)
-    unless _.isEmpty(stderr)
-      err = stderr
-    cb err
-
-exports.pushExec = (command, args, wd, cb) ->
-  #console.dir arguments
-  if arguments.length is 3
-    cb = wd
-    wd = null
-
-  if wd
-    cwd = process.cwd()
-    process.chdir wd
-
-  cmd = spawn(command, args)
+exports.spawn = (command, args, opts, cb) ->
+  cmd = spawn(command, args, opts)
 
   cmd.stdout.on 'data', (data) ->
     console.log data.toString()
@@ -30,6 +9,6 @@ exports.pushExec = (command, args, wd, cb) ->
   cmd.stderr.on 'data', (data) ->
     console.error data.toString()
 
-  cmd.on 'exit', (code) ->
-    process.chdir(cwd) if wd
+  #cmd.on 'exit', (code) ->
+  cmd.on 'close', (code) ->
     cb code

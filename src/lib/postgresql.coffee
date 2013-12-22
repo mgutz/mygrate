@@ -52,7 +52,11 @@ END $$;
     host = @config.host || "localhost"
     command = "psql"
     args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
-    Utils.pushExec command, args, Path.dirname(filename), cb
+    Utils.spawn command, args, {
+      cwd: Path.dirname(filename),
+      env:
+        PGPASSWORD: @config.password
+    }, cb
 
 
   # Not too confident using the driver for large scripts. The error

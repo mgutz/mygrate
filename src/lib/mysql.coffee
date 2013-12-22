@@ -32,7 +32,7 @@ class Mysql
     host = @config.host || "localhost"
     command = "mysql"
     args = ["-u#{@config.user}", "-p#{@config.password}", "-D#{@config.database}", "-h#{host}", "-P#{port}", "-e", "source #{filename}"]
-    Utils.pushExec command, args, Path.dirname(filename), cb
+    Utils.spawn command, args, {cwd: Path.dirname(filename)}, cb
 
   init: (cb) ->
     sql = """
