@@ -30,7 +30,7 @@ dbInterface = ->
 
 
   return {
-    connectionInfo: config[adapter],
+    config: config[adapter],
     schema: new Adapter(config[adapter])
   }
 
@@ -170,7 +170,7 @@ Commands =
           migrateUp = (version, cb) ->
             filename = migrationFile(version, "up")
             schema.execFile filename, (err) ->
-              return cb("Up migrations/#{version}: #{err}") if err
+              return cb("Up migrations/#{version}: exit code #{err}") if err
 
               up = readMigrationFile(version, "up")
               down = readMigrationFile(version, "down")
@@ -195,7 +195,6 @@ Commands =
         if errFile
           errFile = errFile[1]
           Fs.writeFileSync("migrations/errfile", errFile)
-          console.error "FILE", errFile
         console.error err
         process.exit 1
       else
@@ -287,15 +286,26 @@ Commands =
         console.log "OK"
         process.exit()
 
+  printConfig: (config) ->
+    s = "Connection: "
+    s += config.user
+    #s += ":"+config.password.replace(/./g, '*') if config.password
+    s += "@"+config.host
+    s += ":"+config.port if config.port
+    s += "/"+config.database if config.database
+    console.log s
+
+
 
   # List a history of all executed migrations.
   history: =>
-    {connectionInfo, schema} = dbInterface()
+    {config, schema} = dbInterface()
     schema.all (err, migrations) ->
       if err
         console.error err
         process.exit 1
-      console.log "History connection="+JSON.stringify(connectionInfo)
+      #console.log "ConnectionHistory connection="+JSON.stringify(connectionInfo)
+      Commands.printConfig config
       if migrations.length < 1
         console.log "0 migrations found"
       else

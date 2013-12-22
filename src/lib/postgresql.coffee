@@ -13,20 +13,11 @@ class Postgresql
     @config.host = 'localhost' unless @config.host?
     @config.port = 5432 unless @config.port?
 
+
   using: (config, cb) ->
     if arguments.length == 1
       cb = config
       config = @config
-
-    connectionString = "tcp://"
-    connectionString += config.user
-    connectionString += ":"+config.password if config.password
-    connectionString += "@"+config.host
-    connectionString += ":"+config.port if config.port
-    connectionString += "/"+config.database if config.database
-
-    console.log
-
     Pg.connect config, cb
 
 
@@ -36,8 +27,8 @@ class Postgresql
 
       client.query sql, (err, result) ->
         release()
-        if err
-          console.error(err)
+        # if err
+        #   console.error(err)
         cb err, result
 
 
@@ -60,7 +51,7 @@ END $$;
     port = @config.port || 5432
     host = @config.host || "localhost"
     command = "psql"
-    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}"]
+    args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
     Utils.pushExec command, args, Path.dirname(filename), cb
 
 
@@ -83,7 +74,7 @@ END $$;
 
   init: (cb) ->
     sql = """
-        create table if not exists schema_migrations(
+        create table if not exists schema_migrations (
           version varchar(256) not null primary key,
           up text,
           down text,
@@ -112,6 +103,8 @@ END $$;
       order by version desc;
     """
     @exec sql, (err, result) ->
+      if err?.message?.indexOf('"schema_migrations" does not exist') > 0
+        return cb(null, [])
       return cb(err) if err
       cb null, result.rows
 
@@ -140,6 +133,7 @@ END $$;
   #
   # @param {String} deployEnv
   createDatabase: ->
+    Prompt.delimiter = ""
     Prompt.start()
 
     config = @config
@@ -159,7 +153,7 @@ END $$;
       statements = [
           "drop database if exists #{config.database};"
           "drop user if exists #{config.user};"
-          "create user #{config.user} password '#{config.password}';"
+          "create user #{config.user} password '#{config.password}' SUPERUSER CREATEROLE;"
           "create database #{config.database} owner #{config.user};"
       ]
 
