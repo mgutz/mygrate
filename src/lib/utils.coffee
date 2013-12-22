@@ -9,6 +9,5 @@ exports.spawn = (command, args, opts, cb) ->
   cmd.stderr.on 'data', (data) ->
     console.error data.toString()
 
-  #cmd.on 'exit', (code) ->
   cmd.on 'close', (code) ->
     cb code
