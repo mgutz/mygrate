@@ -33,7 +33,7 @@ dbInterface = ->
 
   return {
     config: config[adapter],
-    minPrehookDate: config.mygrate?.minPrehookDate ? "999999999999"
+    minHookDate: config.mygrate?.minHookDate ? "999999999999"
     schema: new Adapter(config[adapter])
   }
 
@@ -211,7 +211,7 @@ module.exports = {
 
   # Runs all `up` migrations not yet executed on the database.
   migrateUp: (argv) =>
-    {schema, config, minPrehookDate} = dbInterface()
+    {schema, config, minHookDate} = dbInterface()
     dirs = null
     lastMigration = null
 
@@ -244,7 +244,7 @@ module.exports = {
                 filename = Path.resolve("migrations/#{version}/prehook")
                 if existsSync(filename)
                   timestamp = version.slice(0, 12)
-                  if minPrehookDate > timestamp
+                  if minHookDate > timestamp
                     console.log "Skipping #{version}/prehook"
                     return cb()
 
