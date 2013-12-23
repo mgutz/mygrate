@@ -3,6 +3,7 @@ Path = require("path")
 prog = require("commander")
 async = require("async")
 Utils = require("./utils")
+Table = require("cli-table")
 
 existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
 
@@ -24,14 +25,15 @@ dbInterface = ->
   env = process.env.NODE_ENV || "development"
   config = require(process.cwd()+"/migrations/config")[env]
 
-  for k, v of config
-    adapter = k
+  for adapter, v of config
+    continue if adapter == "mygrate"
     Adapter = require("./"+adapter)
     break
 
 
   return {
     config: config[adapter],
+    minPrehookDate: config.mygrate?.minPrehookDate ? "999999999999"
     schema: new Adapter(config[adapter])
   }
 
@@ -209,7 +211,7 @@ module.exports = {
 
   # Runs all `up` migrations not yet executed on the database.
   migrateUp: (argv) =>
-    {schema} = dbInterface()
+    {schema, config, minPrehookDate} = dbInterface()
     dirs = null
     lastMigration = null
 
@@ -239,11 +241,17 @@ module.exports = {
           migrateUp = (version, cb) ->
             async.series {
               prehook: (cb) ->
-                return cb() unless argv.hooks
-                console.log "Running prehook"
                 filename = Path.resolve("migrations/#{version}/prehook")
                 if existsSync(filename)
+                  timestamp = version.slice(0, 12)
+                  if minPrehookDate > timestamp
+                    console.log "Skipping #{version}/prehook"
+                    return cb()
+
+                  console.log "Running #{version}/prehook"
                   Utils.spawn filename, [], {cwd: Path.dirname(filename)}, cb
+                else
+                  cb()
 
               upscript: (cb) ->
                 filename = migrationFile(version, "up")
@@ -385,12 +393,24 @@ module.exports = {
         process.exit 1
       #console.log "ConnectionHistory connection="+JSON.stringify(connectionInfo)
       Commands.printConfig config
+
       if migrations.length < 1
         console.log "0 migrations found"
       else
+        table = new Table
+          head: ["migrated at", "script set"]
+
+          chars: {
+            'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': '',
+            'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': '',
+            'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+            'right': '' , 'right-mid': '' , 'middle': ' '
+          }
+
         for migration in migrations
           at = timestamp(new Date(migration.created_at), "-")
-          console.log "#{at}\t#{migration.version}"
+          table.push [at, migration.version]
+        console.log(table.toString())
       process.exit()
 
 

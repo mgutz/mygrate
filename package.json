@@ -8,7 +8,8 @@
     "async": "~0.2.7",
     "underscore": "~1.4.4",
     "prompt": "~0.2.9",
-    "minimist": "0.0.5"
+    "minimist": "0.0.5",
+    "cli-table": "~0.2.0"
   },
   "devDependencies": {
     "coffee-script": "~1.6.2",
