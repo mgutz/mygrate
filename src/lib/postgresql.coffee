@@ -3,16 +3,15 @@ Fs = require("fs")
 Pg = require("pg")
 Utils = require("./utils")
 Async = require("async")
-Commander = require("commander")
 Prompt = require("prompt")
 Prompt.message = ''
-pty = require("pty.js")
 
 
 class Postgresql
   constructor: (@config) ->
     @config.host = 'localhost' unless @config.host?
     @config.port = 5432 unless @config.port?
+    process.env.PGPASSWORD = @config.password
 
 
   using: (config, cb) ->
@@ -56,8 +55,8 @@ END $$;
     args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
     Utils.spawn command, args, {
       cwd: Path.dirname(filename)
-      env:
-        PGPASSWORD: @config.password
+      # env:
+      #   PGPASSWORD: @config.password
     }, cb
 
 
@@ -161,7 +160,7 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
   # using a root user instead of the user defined in config.js.
   #
   # @param {String} deployEnv
-  createDatabase: ->
+  createDatabase: (defaultUser) ->
     Prompt.delimiter = ""
     Prompt.start()
 
@@ -170,7 +169,7 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
     using = @using
 
     prompts = [
-      { name: 'user', description: 'root user', default: 'postgres' }
+      { name: 'user', description: 'root user', default: defaultUser }
       { name: 'password', hidden: true}
       { name: 'host', default: 'localhost'}
       { name: 'port', default: '5432'}

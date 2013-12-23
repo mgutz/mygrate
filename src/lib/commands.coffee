@@ -1,9 +1,9 @@
 Fs = require("fs")
 Path = require("path")
-prog = require("commander")
 async = require("async")
 Utils = require("./utils")
 Table = require("cli-table")
+Os = require("os")
 
 existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
 
@@ -416,7 +416,13 @@ module.exports = {
 
   createDatabase: =>
     {schema} = dbInterface()
-    schema.createDatabase()
+    platform = Os.platform()
+    if platform.match(/^darwin/)
+      defaultUser = process.env.USER
+    else
+      defaultUser = 'postgres'
+
+    schema.createDatabase defaultUser
 
 
   execFile: (filename) =>
