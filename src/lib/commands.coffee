@@ -2,6 +2,7 @@ Fs = require("fs")
 Path = require("path")
 prog = require("commander")
 async = require("async")
+Utils = require("./utils")
 
 existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
 
@@ -47,15 +48,13 @@ timestamp = (date=new Date(), separator="") ->
   ].join(separator)
 
 
-initMigrationsDir = (dbMake) ->
+initMigrationsDir = (vendor, config) ->
   unless existsSync("./migrations")
     Fs.mkdirSync("./migrations")
 
   unless existsSync("./migrations/config.js")
-    absPath = Path.resolve(__dirname+"/../examples/#{dbMake}/migrations/config.js")
-    sample = Fs.readFileSync(absPath, "utf8")
-    Fs.writeFileSync "./migrations/config.js", sample
-    console.log "Created #{dbMake} sample configuration. Edit migrations/config.js."
+    Fs.writeFileSync "./migrations/config.js", config
+    console.log "Created #{vendor} sample configuration. Edit migrations/config.js."
 
 
 getSubDirs = (dirname, cb) ->
@@ -100,6 +99,12 @@ forceDown = (schema, version, cb) ->
 
 ## COMMANDS
 Commands =
+
+  "console": ->
+    {schema} = dbInterface()
+    schema.console()
+
+
   # Generates a migration with optional `suffix`
   #
   # Example
@@ -127,19 +132,83 @@ Commands =
 
 
   # Initializes migrations directory with sample config.js
-  init: (dbMake) =>
-    if typeof dbMake != 'string'
-      dbMake = "postgresql"
+  init: (vendor) =>
+    if ['mysql', 'postgresql'].indexOf(vendor) < 0
+      vendor = "postgresql"
 
-    if ['mysql', 'postgresql'].indexOf(dbMake) < 0
-      dbMake = "postgresql"
+    name = Path.basename(process.cwd()).replace(/\W/g, "_")
 
-    initMigrationsDir dbMake
+    switch vendor
+      when 'mysql'
+        config =  """
+module.exports = {
+  development: {
+    mysql: {
+      host: "localhost",
+      database: "#{name}_dev",
+      user: "#{name}_dev_user",
+      password: "dev",
+      port: 3306
+    }
+  },
+  test: {
+    mysql: {
+      host: "localhost",
+      database: "#{name}_test",
+      user: "#{name}_test_user",
+      password: "test",
+      port: 3306
+    }
+  },
+  production: {
+    mysql: {
+      host: "localhost",
+      database: "#{name}_prod",
+      user: "#{name}_prod_user",
+      password: "prod",
+      port: 3306
+    }
+  }
+};
+        """
+
+      when 'postgres', 'postgresql'
+        config = """
+module.exports = {
+  development: {
+    postgresql: {
+      host: "localhost",
+      database: "#{name}_dev",
+      user: "#{name}_dev_user",
+      password: "dev"
+    }
+  },
+  test: {
+    postgresql: {
+      host: "localhost",
+      database: "#{name}_test",
+      user: "#{name}_test_user",
+      password: "test"
+    }
+  },
+  production: {
+    postgresql: {
+      host: "localhost",
+      database: "#{name}_prod",
+      user: "#{name}_prod_user",
+      password: "prod"
+    }
+  }
+};
+
+"""
+
+    initMigrationsDir vendor, config
     Commands.generate "init"
 
 
   # Runs all `up` migrations not yet executed on the database.
-  migrateUp: =>
+  migrateUp: (argv) =>
     {schema} = dbInterface()
     dirs = null
     lastMigration = null
@@ -168,17 +237,27 @@ Commands =
 
         if versions.length > 0
           migrateUp = (version, cb) ->
-            filename = migrationFile(version, "up")
-            schema.execFile filename, (err) ->
-              return cb("Up migrations/#{version}: exit code #{err}") if err
+            async.series {
+              prehook: (cb) ->
+                return cb() unless argv.hooks
+                console.log "Running prehook"
+                filename = Path.resolve("migrations/#{version}/prehook")
+                if existsSync(filename)
+                  Utils.spawn filename, [], {cwd: Path.dirname(filename)}, cb
 
-              up = readMigrationFile(version, "up")
-              down = readMigrationFile(version, "down")
-              schema.add version, up, down, (err) ->
-                return cb(err) if err
+              upscript: (cb) ->
+                filename = migrationFile(version, "up")
+                schema.execFile filename, (err) ->
+                  return cb("Up migrations/#{version}: exit code #{err}") if err
 
-                console.log "Up migrations/#{version}"
-                cb null
+                  up = readMigrationFile(version, "up")
+                  down = readMigrationFile(version, "down")
+                  schema.add version, up, down, (err) ->
+                    return cb(err) if err
+
+                    console.log "Up migrations/#{version}"
+                    cb null
+            }, cb
 
           async.forEachSeries versions, migrateUp, cb
 

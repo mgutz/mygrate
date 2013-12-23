@@ -6,6 +6,7 @@ Async = require("async")
 Commander = require("commander")
 Prompt = require("prompt")
 Prompt.message = ''
+pty = require("pty.js")
 
 
 class Postgresql
@@ -51,12 +52,36 @@ END $$;
     port = @config.port || 5432
     host = @config.host || "localhost"
     command = "psql"
-    args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
+    #args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
+    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
     Utils.spawn command, args, {
-      cwd: Path.dirname(filename),
+      cwd: Path.dirname(filename)
       env:
         PGPASSWORD: @config.password
     }, cb
+
+
+  dbConsoleScript: ->
+    port = @config.port || 5432
+    host = @config.host || "localhost"
+    Fs.writeFileSync "dbconsole", """#!/bin/sh
+PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} -h #{host} -p #{port}
+""", {mode: 0o755}
+
+  "console": ->
+    # port = @config.port || 5432
+    # host = @config.host || "localhost"
+    # command = "psql"
+    # #args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
+    # args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port]
+    # Utils.launch command, args, {
+    #   detached: true
+    #   stdio: 'inherit'
+    #   env:
+    #     PGPASSWORD: @config.password
+    # }
+    @dbConsoleScript()
+    console.log "Node.js has problems running interactive apps. Run ./dbconsole from now on."
 
 
   # Not too confident using the driver for large scripts. The error
@@ -140,6 +165,7 @@ END $$;
     Prompt.delimiter = ""
     Prompt.start()
 
+    self = @
     config = @config
     using = @using
 
@@ -186,6 +212,9 @@ END $$;
 \thost: #{config.host}
 \tport: #{config.port}
 """
+
+          self.dbConsoleScript()
+          console.log "\nTo quickly run psql, run ./dbconsole"
           console.log "OK"
           process.exit(0)
 
