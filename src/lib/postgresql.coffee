@@ -1,11 +1,15 @@
 Path = require("path")
 Fs = require("fs")
-Pg = require("pg")
 Utils = require("./utils")
 Async = require("async")
 Prompt = require("prompt")
 Prompt.message = ''
 
+try
+  Pg = require(Path.join(process.cwd(), "node_modules", "pg"))
+catch e
+  console.error "Please install PostgreSQL driver. Run\n\n\tnpm install pg --save"
+  process.reallyExit(1)
 
 class Postgresql
   constructor: (@config) ->
