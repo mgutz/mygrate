@@ -14,9 +14,10 @@ cwd = process.cwd()
 errHandler = (err) ->
   if err
     console.error(err)
+    process.exit 1
   else
     console.log "OK"
-    process.exit(1)
+    process.exit 0
 
 dbInterface = ->
   if !existsSync("migrations")
@@ -284,7 +285,7 @@ module.exports = {
         process.exit 1
       else
         console.log "OK"
-        process.exit()
+        process.exit 0
 
 
   # Migrates down count versions or before a specific version.
@@ -359,7 +360,7 @@ module.exports = {
         process.exit 1
       else
         console.log "OK"
-        process.exit()
+        process.exit 0
 
 
   migrateLast: ->
@@ -402,7 +403,7 @@ module.exports = {
         process.exit 1
       else
         console.log "OK"
-        process.exit()
+        process.exit 0
 
 
   printConfig: (config) ->
@@ -443,7 +444,7 @@ module.exports = {
           at = timestamp(new Date(migration.created_at), "-")
           table.push [at, migration.version]
         console.log(table.toString())
-      process.exit()
+      process.exit 0
 
 
   createDatabase: =>

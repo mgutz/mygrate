@@ -9,7 +9,7 @@ try
   Pg = require(Path.join(process.cwd(), "node_modules", "pg"))
 catch e
   console.error "Please install PostgreSQL driver. Run\n\n\tnpm install pg --save"
-  process.reallyExit(1)
+  process.reallyExit 1
 
 class Postgresql
   constructor: (@config) ->
@@ -205,8 +205,8 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
 
       Async.forEachSeries statements, execRootSql, (err) ->
         if (err)
-          console.error(err)
-          process.exit(1)
+          console.error err
+          process.exit 1
         else
           console.log """Created
 \tdatabase: #{config.database}
@@ -219,7 +219,7 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
           self.dbConsoleScript()
           console.log "\nTo quickly run psql, run ./dbconsole"
           console.log "OK"
-          process.exit(0)
+          process.exit 0
 
 module.exports = Postgresql
 
