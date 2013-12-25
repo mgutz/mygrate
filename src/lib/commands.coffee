@@ -386,7 +386,7 @@ module.exports = {
           migrateDownIfLast: (cb) ->
             if lastMigration.version == _.last(dirs)
               # make it appear this is argv from cli
-              Commands.migrateDown {_:["down", "1"]}, (err) ->
+              Commands.migrateDown {_:["down", 1]}, (err) ->
                 return cb(err) if err
                 console.log "OK\n"
                 cb()
