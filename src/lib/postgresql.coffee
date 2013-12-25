@@ -56,7 +56,7 @@ END $$;
     host = @config.host || "localhost"
     command = "psql"
     #args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
-    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
+    args = ["-U", @config.user, "-q", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
     Utils.spawn command, args, {
       cwd: Path.dirname(filename)
       # env:

@@ -46,6 +46,7 @@ To run migrations, do any of the following
     mygrate down 2                       # down 2 migrations
     mygrate down all                     # down all migrations
     mygrate down TIMESTAMP-some-script   # down to migration before this one
+    mygrate last                         # down (if needed) then up last dir
 
 To view migrations applied to the database
 

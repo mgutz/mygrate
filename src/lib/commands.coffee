@@ -4,6 +4,7 @@ async = require("async")
 Utils = require("./utils")
 Table = require("cli-table")
 Os = require("os")
+_ = require("underscore")
 
 existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
 
@@ -29,7 +30,6 @@ dbInterface = ->
     continue if adapter == "mygrate"
     Adapter = require("./"+adapter)
     break
-
 
   return {
     config: config[adapter],
@@ -62,11 +62,10 @@ initMigrationsDir = (vendor, config) ->
 getSubDirs = (dirname, cb) ->
   dirname = Path.resolve(dirname)
   dirs =[]
-  fifiles = Fs.readdirSync(dirname)
   for file in Fs.readdirSync(dirname)
     stat = Fs.statSync(dirname+"/"+file)
     dirs.push file if stat.isDirectory()
-  cb null, dirs
+  cb null, dirs.sort()
 
 
 migrationFile = (version, which) ->
@@ -112,7 +111,9 @@ Commands =
   # Example
   #   generate 'add-post'   // creates `migrations/TIME-add-post/up.sql`
   #                         // and `migrations/TIME-add-post/down.sql`
-  generate: (suffix, options) =>
+  generate: (argv) =>
+    suffix = argv._[1]
+
     if !existsSync(Path.resolve("migrations"))
       console.error "ERROR migrations directory not found. Try `mygrate init`"
       process.exit 1
@@ -134,7 +135,8 @@ Commands =
 
 
   # Initializes migrations directory with sample config.js
-  init: (vendor) =>
+  init: (argv) =>
+    vendor = argv._[1]
     if ['mysql', 'postgresql'].indexOf(vendor) < 0
       vendor = "postgresql"
 
@@ -210,7 +212,7 @@ module.exports = {
 
 
   # Runs all `up` migrations not yet executed on the database.
-  migrateUp: (argv) =>
+  migrateUp: (argv, cb) =>
     {schema, config, minHookDate} = dbInterface()
     dirs = null
     lastMigration = null
@@ -291,11 +293,10 @@ module.exports = {
 
 
   # Migrates down count versions or before a specific version.
-  migrateDown: (countOrVersion) =>
+  migrateDown: (argv, cb) =>
     {schema} = dbInterface()
 
-    if typeof countOrVersion isnt "string"
-      countOrVersion = "1"
+    countOrVersion = argv._[1] ? 1
 
     dirs = null
     lastMigration = null
@@ -317,14 +318,14 @@ module.exports = {
         schema.all (err, migrations) ->
           return cb(err) if err
 
-          if countOrVersion == "1"
-            if existsSync("migrations/errfile")
-              version = Fs.readFileSync("migrations/errfile", "utf8")
-              console.log "Trying to recover from #{version} error"
-              return forceDown schema, version, (err) ->
-                if !err
-                  Fs.unlinkSync("migrations/errfile")
-                return cb(err)
+          # if countOrVersion == "1"
+          #   if existsSync("migrations/errfile")
+          #     version = Fs.readFileSync("migrations/errfile", "utf8")
+          #     console.log "Trying to recover from #{version} error"
+          #     return forceDown schema, version, (err) ->
+          #       if !err
+          #         Fs.unlinkSync("migrations/errfile")
+          #       return cb(err)
 
 
           if migrations.length is 0
@@ -340,8 +341,8 @@ module.exports = {
             down schema, versions, cb
 
           # Undo specific count
-          else if countOrVersion.length < 3
-            count = parseInt(countOrVersion)
+          else if _.isNumber(countOrVersion)
+            count = countOrVersion
             for migration in migrations
               versions.push migration.version
               count -= 1
@@ -366,12 +367,58 @@ module.exports = {
             else
               cb null
     }, (err) -> # end of async.series
+      return cb(err) if cb?
+
       if err
         console.error err
         process.exit 1
       else
         console.log "OK"
         process.exit()
+
+
+  migrateLast: ->
+    {schema} = dbInterface()
+
+    dirs = null
+    lastMigration = null
+
+    async.series {
+      getLastMigration: (cb) ->
+        schema.last (err, migration) ->
+          return cb(err) if err
+          lastMigration = migration
+          cb err
+
+      getMigrationDirs: (cb) ->
+        getSubDirs "migrations", (err, subdirs) ->
+          return cb(err) if err
+          dirs = subdirs
+          cb null
+
+      run: (cb) ->
+        async.series
+          migrateDownIfLast: (cb) ->
+            if lastMigration.version == _.last(dirs)
+              # make it appear this is argv from cli
+              Commands.migrateDown {_:["down", "1"]}, (err) ->
+                return cb(err) if err
+                console.log "OK\n"
+                cb()
+            else
+              cb()
+
+          migrateUp: (cb) ->
+            Commands.migrateUp()
+            cb()
+    }, (err) -> # end of async.series
+      if err
+        console.error err
+        process.exit 1
+      else
+        console.log "OK"
+        process.exit()
+
 
   printConfig: (config) ->
     s = "Connection: "
@@ -425,7 +472,8 @@ module.exports = {
     schema.createDatabase defaultUser
 
 
-  execFile: (filename) =>
+  execFile: (argv) =>
+    filename = argv._[1]
     if typeof filename != 'string'
       return errHandler('Filename required')
 
