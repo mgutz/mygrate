@@ -8,7 +8,8 @@ Prompt.message = ''
 try
   Pg = require(Path.join(process.cwd(), "node_modules", "pg"))
 catch e
-  console.error "Please install PostgreSQL driver. Run\n\n\tnpm install pg --save"
+  console.error """Local PostgreSQL driver required, run
+  \tnpm install pg --save"""
   process.reallyExit 1
 
 class Postgresql
@@ -35,21 +36,6 @@ class Postgresql
         #   console.error(err)
         cb err, result
 
-
-  toSingleStatement: (sql) ->
-    if sql.match(/^do\s*\$\$/i)
-      sql
-    else
-      # Wrap script in DO to properly handle multiple statements, which
-      # works intermittenly. Once a prepared statement is used, multiple
-      # statements do not work as expected. By wrapping it in DO, it becomes
-      # a single statement.
-       """
-DO $$
-BEGIN
-#{sql}
-END $$;
-"""
 
   execFileCLI: (filename, cb) ->
     port = @config.port || 5432
@@ -85,19 +71,6 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
     # }
     @dbConsoleScript()
     console.log "Node.js has problems running interactive apps. Run ./dbconsole from now on."
-
-
-  # Not too confident using the driver for large scripts. The error
-  # information returned is not as helpful as returned by the command
-  # line utility. The line number is always off. Moreover, to reliably
-  # run multiple statements the script must be run within a `DO$$ ... END$$;`
-  execFileDriver: (filename, cb) ->
-    me = @
-    Fs.readFile filename, 'utf8', (err, script) ->
-
-      script = me.toSingleStatement(script)
-      return cb(err) if err
-      me.exec script, cb
 
 
   execFile: (args...) ->
@@ -175,8 +148,8 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
     prompts = [
       { name: 'user', description: 'root user', default: defaultUser }
       { name: 'password', hidden: true}
-      { name: 'host', default: 'localhost'}
-      { name: 'port', default: '5432'}
+      # { name: 'host', default: 'localhost'}
+      # { name: 'port', default: '5432'}
     ]
 
     Prompt.get prompts, (err, result) ->
@@ -194,8 +167,8 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
         rootConfig =
           user: user
           password: password
-          host: host
-          port: port
+          host: config.host
+          port: config.port
           database: "postgres"
 
         using rootConfig, (err, client) ->
@@ -206,6 +179,7 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
       Async.forEachSeries statements, execRootSql, (err) ->
         if (err)
           console.error err
+          console.error "Verify migrations/config.js has the correct host and port"
           process.exit 1
         else
           console.log """Created
@@ -215,9 +189,60 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
 \thost: #{config.host}
 \tport: #{config.port}
 """
-
           self.dbConsoleScript()
           console.log "\nTo quickly run psql, run ./dbconsole"
+          console.log "OK"
+          process.exit 0
+
+  # Creates the deploy specific environemnt database from migrations/config.js
+  # using a root user instead of the user defined in config.js.
+  #
+  # @param {String} deployEnv
+  dropDatabase: (defaultUser) ->
+    Prompt.delimiter = ""
+    Prompt.start()
+
+    self = @
+    config = @config
+    using = @using
+
+    prompts = [
+      { name: 'user', description: 'root user', default: defaultUser }
+      { name: 'password', hidden: true}
+      # { name: 'host', default: 'localhost'}
+      # { name: 'port', default: '5432'}
+    ]
+
+    Prompt.get prompts, (err, result) ->
+      {user, password, host, port} = result
+      password = null if password.trim().length == 0
+
+      statements = [
+          "drop database if exists #{config.database};"
+          "drop user if exists #{config.user};"
+      ]
+
+      execRootSql = (sql, cb) ->
+        rootConfig =
+          user: user
+          password: password
+          host: config.host
+          port: config.port
+          database: "postgres"
+
+        using rootConfig, (err, client) ->
+          console.error(err) if err
+          client.query sql, cb
+
+      Async.forEachSeries statements, execRootSql, (err) ->
+        if (err)
+          console.error err
+          process.exit 1
+        else
+          console.log """Dropped
+\tdatabase: #{config.database}
+\tuser: #{config.user}
+"""
           console.log "OK"
           process.exit 0
 

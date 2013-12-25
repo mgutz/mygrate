@@ -6,8 +6,6 @@ Table = require("cli-table")
 Os = require("os")
 _ = require("underscore")
 
-existsSync = if Fs.existsSync then Fs.existsSync else Path.existsSync
-
 cwd = process.cwd()
 
 
@@ -19,8 +17,19 @@ errHandler = (err) ->
     console.log "OK"
     process.exit 0
 
+getDefaultUser = (vendor) ->
+  if vendor.match('mysql')
+    user = 'root'
+  else
+    platform = Os.platform()
+    if platform.match(/^darwin/)
+      user = process.env.USER
+    else
+      user = 'postgres'
+  return user
+
 dbInterface = ->
-  if !existsSync("migrations")
+  if !Fs.existsSync("migrations")
     console.error("migrations directory not found")
     process.exit 1
 
@@ -36,6 +45,7 @@ dbInterface = ->
     config: config[adapter],
     minHookDate: config.mygrate?.minHookDate ? "999999999999"
     schema: new Adapter(config[adapter])
+    vendor: adapter
   }
 
 
@@ -52,10 +62,10 @@ timestamp = (date=new Date(), separator="") ->
 
 
 initMigrationsDir = (vendor, config) ->
-  unless existsSync("./migrations")
+  unless Fs.existsSync("./migrations")
     Fs.mkdirSync("./migrations")
 
-  unless existsSync("./migrations/config.js")
+  unless Fs.existsSync("./migrations/config.js")
     Fs.writeFileSync "./migrations/config.js", config
     console.log "Created #{vendor} sample configuration. Edit migrations/config.js."
 
@@ -74,7 +84,7 @@ migrationFile = (version, which) ->
 
 readMigrationFile = (migration, which) ->
   filename = migrationFile(migration, which)
-  if existsSync(filename)
+  if Fs.existsSync(filename)
     Fs.readFileSync filename, "utf8"
   else
     ""
@@ -115,7 +125,7 @@ Commands =
   generate: (argv) =>
     suffix = argv._[1]
 
-    if !existsSync(Path.resolve("migrations"))
+    if !Fs.existsSync(Path.resolve("migrations"))
       console.error "ERROR migrations directory not found. Try `mygrate init`"
       process.exit 1
 
@@ -128,7 +138,7 @@ Commands =
       filename += "-"+suffix
 
     path = "./migrations/"+filename
-    unless existsSync(path)
+    unless Fs.existsSync(path)
       Fs.mkdirSync path
       Fs.writeFileSync path+"/up.sql", ""
       Fs.writeFileSync path+"/down.sql", ""
@@ -246,7 +256,7 @@ module.exports = {
             async.series {
               prehook: (cb) ->
                 filename = Path.resolve("migrations/#{version}/prehook")
-                if existsSync(filename)
+                if Fs.existsSync(filename)
                   timestamp = version.slice(0, 12)
                   if minHookDate > timestamp
                     console.log "Skipping #{version}/prehook"
@@ -446,19 +456,15 @@ module.exports = {
         console.log(table.toString())
       process.exit 0
 
+  dropDatabase: ->
+    {schema, vendor} = dbInterface()
+    schema.dropDatabase getDefaultUser(vendor)
 
-  createDatabase: =>
-    {schema} = dbInterface()
-    platform = Os.platform()
-    if platform.match(/^darwin/)
-      defaultUser = process.env.USER
-    else
-      defaultUser = 'postgres'
+  createDatabase: ->
+    {schema, vendor} = dbInterface()
+    schema.createDatabase getDefaultUser(vendor)
 
-    schema.createDatabase defaultUser
-
-
-  execFile: (argv) =>
+  execFile: (argv) ->
     filename = argv._[1]
     if typeof filename != 'string'
       return errHandler('Filename required')

@@ -18,6 +18,7 @@ showUsage = ->
 
     createdb      Create database from config.js and $NODE_ENV
     down          Undo {COUNT|VERSION|all} migrations.
+    dropdb        Drops the database
     file          Execute SQL script in file
     history       Show migrations in database. (default)
     init          Creates migration directory with config
@@ -74,6 +75,7 @@ else if command
     console: commands.console
     createdb: commands.createDatabase
     down: commands.migrateDown
+    dropdb: commands.dropDatabase
     file: commands.execFile
     history: commands.history
     last: commands.migrateLast
