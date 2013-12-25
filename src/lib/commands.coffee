@@ -208,7 +208,8 @@ module.exports = {
 """
 
     initMigrationsDir vendor, config
-    Commands.generate "init"
+    # make it appear like mygrate new init
+    Commands.generate {_: ["new", "init"]}
 
 
   # Runs all `up` migrations not yet executed on the database.
@@ -279,15 +280,9 @@ module.exports = {
           cb null
     }, (err) ->
       if err
-        # try to save error file for `down` command
-        errFile = err.toString().match(/migrations\/([^:]+):/)
-        if errFile
-          errFile = errFile[1]
-          Fs.writeFileSync("migrations/errfile", errFile)
         console.error err
         process.exit 1
       else
-        Fs.unlinkSync("migrations/errfile") if existsSync("migrations/errfile")
         console.log "OK"
         process.exit()
 
@@ -317,16 +312,6 @@ module.exports = {
       run: (cb) ->
         schema.all (err, migrations) ->
           return cb(err) if err
-
-          # if countOrVersion == "1"
-          #   if existsSync("migrations/errfile")
-          #     version = Fs.readFileSync("migrations/errfile", "utf8")
-          #     console.log "Trying to recover from #{version} error"
-          #     return forceDown schema, version, (err) ->
-          #       if !err
-          #         Fs.unlinkSync("migrations/errfile")
-          #       return cb(err)
-
 
           if migrations.length is 0
             console.log "0 migrations found"
