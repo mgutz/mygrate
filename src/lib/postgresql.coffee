@@ -53,25 +53,19 @@ class Postgresql
   dbConsoleScript: ->
     port = @config.port || 5432
     host = @config.host || "localhost"
-    Fs.writeFileSync "dbconsole", """#!/bin/sh
+    Fs.writeFileSync "migrations/dbconsole", """#!/bin/sh
 PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} -h #{host} -p #{port}
 """, {mode: 0o755}
 
   "console": ->
-    # port = @config.port || 5432
-    # host = @config.host || "localhost"
-    # command = "psql"
-    # #args = ["-U", @config.user, "-a", "-e", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
-    # args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port]
-    # Utils.launch command, args, {
-    #   detached: true
-    #   stdio: 'inherit'
-    #   env:
-    #     PGPASSWORD: @config.password
-    # }
-    @dbConsoleScript()
-    console.log "Node.js has problems running interactive apps. Run ./dbconsole from now on."
-
+    port = @config.port || 5432
+    host = @config.host || "localhost"
+    command = "psql"
+    args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port]
+    Utils.spawn command, args, {
+      stdio: 'inherit'
+    }, (code) ->
+      process.exit code
 
   execFile: (args...) ->
     @execFileCLI args...
@@ -189,8 +183,6 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
 \thost: #{config.host}
 \tport: #{config.port}
 """
-          self.dbConsoleScript()
-          console.log "\nTo quickly run psql, run ./dbconsole"
           console.log "OK"
           process.exit 0
 
