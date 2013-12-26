@@ -5,6 +5,7 @@ argv = require("minimist")(process.argv.slice(2), {
   alias:
     version: "V"
     help: "h"
+    template: "t"
 })
 command = argv._[0]
 
@@ -51,6 +52,9 @@ showUsage = ->
     # generate a new migration named migrations/NOW-add-tags
     mygrate new add-tags
 
+    # generate a new migration using plv8 template
+    mygrate new add-tags -t plv8
+
     # run specific file, must end with .sql
     mygrate migrations/test.sql
 
@@ -85,7 +89,7 @@ else if command
 
   fn = commands[command]
   if fn
-    fn(argv)
+    fn argv
   else
     showUsage()
 else

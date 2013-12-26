@@ -5,6 +5,7 @@ Utils = require("./utils")
 Table = require("cli-table")
 Os = require("os")
 _ = require("underscore")
+Wrench = require("wrench")
 
 cwd = process.cwd()
 
@@ -74,8 +75,10 @@ getSubDirs = (dirname, cb) ->
   dirname = Path.resolve(dirname)
   dirs =[]
   for file in Fs.readdirSync(dirname)
+    continue unless file.match(/^\d{12}/)
     stat = Fs.statSync(dirname+"/"+file)
-    dirs.push file if stat.isDirectory()
+    if stat.isDirectory()
+      dirs.push file if stat.isDirectory()
   cb null, dirs.sort()
 
 
@@ -122,8 +125,11 @@ Commands =
   # Example
   #   generate 'add-post'   // creates `migrations/TIME-add-post/up.sql`
   #                         // and `migrations/TIME-add-post/down.sql`
-  generate: (argv) =>
+  generate: (argv, vendor) =>
     suffix = argv._[1]
+    template = argv.template || "default"
+    if !vendor
+      {vendor} = dbInterface()
 
     if !Fs.existsSync(Path.resolve("migrations"))
       console.error "ERROR migrations directory not found. Try `mygrate init`"
@@ -139,15 +145,16 @@ Commands =
 
     path = "./migrations/"+filename
     unless Fs.existsSync(path)
-      Fs.mkdirSync path
-      Fs.writeFileSync path+"/up.sql", ""
-      Fs.writeFileSync path+"/down.sql", ""
+      #Fs.mkdirSync path
+      Wrench.copyDirSyncRecursive Path.resolve(__dirname, "../src/templates/#{vendor}/#{template}"), Path.resolve(path)#, forceDelete: true
       console.log "Migration created: "+path
 
 
   # Initializes migrations directory with sample config.js
   init: (argv) =>
     vendor = argv._[1]
+    console.log("argv", argv)
+
     if ['mysql', 'postgresql'].indexOf(vendor) < 0
       vendor = "postgresql"
 
@@ -191,6 +198,9 @@ module.exports = {
         config = """
 module.exports = {
   development: {
+    mygrate: {
+      minHookDate: "999999999999"
+    },
     postgresql: {
       host: "localhost",
       database: "#{name}_dev",
@@ -220,7 +230,8 @@ module.exports = {
 
     initMigrationsDir vendor, config
     # make it appear like mygrate new init
-    Commands.generate {_: ["new", "init"]}
+    argv._ = ["new", "init"]
+    Commands.generate argv, vendor
 
 
   # Runs all `up` migrations not yet executed on the database.
