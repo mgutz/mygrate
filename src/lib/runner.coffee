@@ -17,30 +17,30 @@ showUsage = ->
 
   Commands:
 
-    createdb      Create database from config.js and $NODE_ENV
-    down          Undo {COUNT|VERSION|all} migrations.
-    dropdb        Drops the database
-    file          Execute SQL script in file
-    history       Show migrations in database. (default)
-    init          Creates migration directory with config
-    last          Undo last dir if applied and migrate up
-    new           Generate new migration directory
-    up            Execute new migrations.
+    createdb        (Re)Create database from config.js and $NODE_ENV
+    down            Undo {COUNT|VERSION|all} migrations.
+    dropdb          Drops the database
+    file            Execute SQL script in file
+    history         Show migrations in database. (default)
+    init            Creates migration directory with config
+    last            Undo last dir if applied and migrate up
+    new             Generate new migration directory
+    up              Execute new migrations.
 
   Options:
 
-    -h, --help    output usage information
-    -V, --version output the version number
+    -h, --help      output usage information
+    -V, --version   output the version number
 
   Examples:
 
     # undo last 3 applied migrations in the database
-    mygrate down 3  # down 3 migrations in DB
+    mygrate down 3
 
     # undo down all applied migrations including this one
     mygrate down 201204261323-people
 
-    # undo all (faster to do `mygrate createdb`)
+    # undo all (`mygrate createdb` is faster)
     mygrate down all
 
     # create migrations dir and mysql config
@@ -58,7 +58,7 @@ showUsage = ->
     # run specific file, must end with .sql
     mygrate migrations/test.sql
 
-    # run any other psql compatible-file
+    # run any other file not having .sql extension
     mygrate file mygrations/test
 """
 
@@ -85,7 +85,7 @@ else if command
     last: commands.migrateLast
     init: commands.init
     "new": commands.generate
-    "up": commands.migrateUp
+    up: commands.migrateUp
 
   fn = commands[command]
   if fn

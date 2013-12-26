@@ -9,6 +9,8 @@ Wrench = require("wrench")
 
 cwd = process.cwd()
 
+DEFAULT_MINHOOK_DATE = "999999999999"
+
 
 errHandler = (err) ->
   if err
@@ -29,13 +31,41 @@ getDefaultUser = (vendor) ->
       user = 'postgres'
   return user
 
+getEnv = ->
+  env = process.env.NODE_ENV || "development"
+
+getEnvConfig = ->
+  getConfig()[getEnv()]
+
+
+getConfig = ->
+  try
+    require(process.cwd()+"/migrations/config.json")
+  catch
+    # legacy version used config.js
+    if Fs.existsSync(process.cwd()+"/migrations/config.js")
+      oldConfig = require(process.cwd()+"/migrations/config")
+      writeConfig oldConfig
+
+      console.error """
+      migrations/config.js has been converted to migrations/config.json.
+      Delete migrations/config.js at your convenience.
+"""
+    else
+      console.error "Config file migration/config.json NOT FOUND"
+
+    process.exit 1
+
+writeConfig = (config) ->
+  Fs.writeFileSync process.cwd()+"/migrations/config.json", JSON.stringify(config, null, '  ')
+
+
 dbInterface = ->
   if !Fs.existsSync("migrations")
     console.error("migrations directory not found")
     process.exit 1
 
-  env = process.env.NODE_ENV || "development"
-  config = require(process.cwd()+"/migrations/config")[env]
+  config = getEnvConfig()
 
   for adapter, v of config
     continue if adapter == "mygrate"
@@ -44,7 +74,7 @@ dbInterface = ->
 
   return {
     config: config[adapter],
-    minHookDate: config.mygrate?.minHookDate ? "999999999999"
+    minHookDate: config.mygrate?.minHookDate ? DEFAULT_MINHOOK_DATE
     schema: new Adapter(config[adapter])
     vendor: adapter
   }
@@ -66,9 +96,9 @@ initMigrationsDir = (vendor, config) ->
   unless Fs.existsSync("./migrations")
     Fs.mkdirSync("./migrations")
 
-  unless Fs.existsSync("./migrations/config.js")
-    Fs.writeFileSync "./migrations/config.js", config
-    console.log "Created #{vendor} sample configuration. Edit migrations/config.js."
+  unless Fs.existsSync("./migrations/config.json")
+    writeConfig config
+    console.log "Created #{vendor} sample configuration. Edit migrations/config.json."
 
 
 getSubDirs = (dirname, cb) ->
@@ -139,14 +169,21 @@ Commands =
       console.error "Migration identifier missing"
       process.exit 1
 
-    filename = timestamp()
+    ts = timestamp()
+    filename = ts
     if typeof suffix is "string"
       filename += "-"+suffix
 
     path = "./migrations/"+filename
     unless Fs.existsSync(path)
-      #Fs.mkdirSync path
       Wrench.copyDirSyncRecursive Path.resolve(__dirname, "../src/templates/#{vendor}/#{template}"), Path.resolve(path)#, forceDelete: true
+
+      # update minHookDate so prehooks will run with this migration
+      if template != 'default'
+        config = getConfig()
+        if config.development.mygrate.minHookDate == DEFAULT_MINHOOK_DATE
+          config.development.mygrate.minHookDate = ts
+          writeConfig config
       console.log "Migration created: "+path
 
 
@@ -162,71 +199,57 @@ Commands =
 
     switch vendor
       when 'mysql'
-        config =  """
-module.exports = {
-  development: {
-    mysql: {
-      host: "localhost",
-      database: "#{name}_dev",
-      user: "#{name}_dev_user",
-      password: "dev",
-      port: 3306
-    }
-  },
-  test: {
-    mysql: {
-      host: "localhost",
-      database: "#{name}_test",
-      user: "#{name}_test_user",
-      password: "test",
-      port: 3306
-    }
-  },
-  production: {
-    mysql: {
-      host: "localhost",
-      database: "#{name}_prod",
-      user: "#{name}_prod_user",
-      password: "prod",
-      port: 3306
-    }
-  }
-};
-        """
+        config =
+          development:
+            mygrate:
+              minHookDate: DEFAULT_MINHOOK_DATE
+            mysql:
+              host: "localhost",
+              database: "#{name}_dev"
+              user: "#{name}_dev_user"
+              password: "dev",
+              port: 3306
+
+          test:
+            mysql:
+              host: "localhost",
+              database: "#{name}_test"
+              user: "#{name}_test_user"
+              password: "test"
+              port: 3306
+
+          production:
+            mysql:
+              host: "localhost"
+              database: "#{name}_prod"
+              user: "#{name}_prod_user"
+              password: "prod"
+              port: 3306
 
       when 'postgres', 'postgresql'
-        config = """
-module.exports = {
-  development: {
-    mygrate: {
-      minHookDate: "999999999999"
-    },
-    postgresql: {
-      host: "localhost",
-      database: "#{name}_dev",
-      user: "#{name}_dev_user",
-      password: "dev"
-    }
-  },
-  test: {
-    postgresql: {
-      host: "localhost",
-      database: "#{name}_test",
-      user: "#{name}_test_user",
-      password: "test"
-    }
-  },
-  production: {
-    postgresql: {
-      host: "localhost",
-      database: "#{name}_prod",
-      user: "#{name}_prod_user",
-      password: "prod"
-    }
-  }
-};
+        config =
+          development:
+            mygrate:
+              minHookDate: DEFAULT_MINHOOK_DATE
+            postgresql:
+              host: "localhost"
+              database: "#{name}_dev"
+              user: "#{name}_dev_user"
+              password: "dev"
 
-"""
+          test:
+            postgresql:
+              host: "localhost"
+              database: "#{name}_test"
+              user: "#{name}_test_user"
+              password: "test"
+
+          production:
+            postgresql:
+              host: "localhost"
+              database: "#{name}_prod"
+              user: "#{name}_prod_user"
+              password: "prod"
 
     initMigrationsDir vendor, config
     # make it appear like mygrate new init
