@@ -20,8 +20,9 @@ errHandler = (err) ->
     console.log "OK"
     process.exit 0
 
+
 getDefaultUser = (vendor) ->
-  if vendor.match('mysql')
+  if vendor == 'mysql'
     user = 'root'
   else
     platform = Os.platform()
@@ -31,8 +32,10 @@ getDefaultUser = (vendor) ->
       user = 'postgres'
   return user
 
+
 getEnv = ->
   env = process.env.NODE_ENV || "development"
+
 
 getEnvConfig = ->
   getConfig()[getEnv()]
@@ -55,6 +58,7 @@ getConfig = ->
       console.error "Config file migration/config.json NOT FOUND"
 
     process.exit 1
+
 
 writeConfig = (config) ->
   Fs.writeFileSync process.cwd()+"/migrations/config.json", JSON.stringify(config, null, '  ')
@@ -292,7 +296,7 @@ Commands =
                 filename = Path.resolve("migrations/#{version}/prehook")
                 if Fs.existsSync(filename)
                   timestamp = version.slice(0, 12)
-                  if minHookDate > timestamp
+                  if minHookDate.slice(0, 12) > timestamp
                     console.log "Skipping #{version}/prehook"
                     return cb()
 
