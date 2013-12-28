@@ -194,7 +194,6 @@ Commands =
   # Initializes migrations directory with sample config.js
   init: (argv) =>
     vendor = argv._[1]
-    console.log("argv", argv)
 
     if ['mysql', 'postgresql'].indexOf(vendor) < 0
       vendor = "postgresql"

@@ -3,7 +3,10 @@
   "name": "mygrate",
   "description": "SQL based migration utility for PostgreSQL and MySQL",
   "version": "0.2.0-pre",
-  "bin": "./bin/mygrate",
+  "bin": {
+    "mygrate": "./bin/mygrate",
+    "myg": "./bin/mygrate"
+  },
   "dependencies": {
     "async": "~0.2.7",
     "underscore": "~1.4.4",
