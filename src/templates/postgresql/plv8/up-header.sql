@@ -13,7 +13,6 @@ insert into plv8_sources
 values
   ('plv8_startup', :'code');
 
--- DO NOT ADD LINES BELOW THIS, else change microspec.SOURCE_LINE_OFFSET
 create or replace function plv8_startup() returns void as $PLV8$
   // resets App global context properties
   var global = (function(){ return this; }).call(null);

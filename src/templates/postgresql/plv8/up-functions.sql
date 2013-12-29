@@ -6,3 +6,4 @@ CREATE OR REPLACE FUNCTION app_hello(name text) RETURNS text AS $$
 $$ LANGUAGE plv8 IMMUTABLE STRICT;
 */
 
+
