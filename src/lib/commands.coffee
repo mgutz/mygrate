@@ -430,7 +430,7 @@ Commands =
           cb null
 
       run: (cb) ->
-        async.series
+        async.series {
           migrateDownIfLast: (cb) ->
             if lastMigration.version == _.last(dirs)
               # make it appear this is argv from cli
@@ -444,6 +444,8 @@ Commands =
           migrateUp: (cb) ->
             Commands.migrateUp()
             cb()
+        }, cb
+
     }, (err) -> # end of async.series
       if err
         console.error err
