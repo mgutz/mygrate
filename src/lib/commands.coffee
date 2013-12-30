@@ -436,14 +436,13 @@ Commands =
               # make it appear this is argv from cli
               Commands.migrateDown {_:["down", 1]}, (err) ->
                 return cb(err) if err
-                console.log "OK\n"
+                console.log "OK1\n"
                 cb()
             else
               cb()
 
           migrateUp: (cb) ->
-            Commands.migrateUp()
-            cb()
+            Commands.migrateUp _:["up"], cb
         }, cb
 
     }, (err) -> # end of async.series
@@ -451,7 +450,7 @@ Commands =
         console.error err
         process.exit 1
       else
-        console.log "OK"
+        console.log "OK2"
         process.exit 0
 
 
