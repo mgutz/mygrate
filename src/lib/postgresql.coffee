@@ -4,13 +4,8 @@ Utils = require("./utils")
 Async = require("async")
 Prompt = require("prompt")
 Prompt.message = ''
+Pg = require("pg.js")
 
-try
-  Pg = require(Path.join(process.cwd(), "node_modules", "pg"))
-catch e
-  console.error """Local PostgreSQL driver required, run
-  \tnpm install pg --save"""
-  process.reallyExit 1
 
 class Postgresql
   constructor: (@config) ->
@@ -53,6 +48,7 @@ class Postgresql
   dbConsoleScript: ->
     port = @config.port || 5432
     host = @config.host || "localhost"
+    # TODO need comparable script on Windows
     Fs.writeFileSync "migrations/dbconsole", """#!/bin/sh
 PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} -h #{host} -p #{port}
 """, {mode: 0o755}
@@ -237,6 +233,7 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
 """
           console.log "OK"
           process.exit 0
+
 
 module.exports = Postgresql
 

@@ -13,7 +13,8 @@
     "prompt": "~0.2.9",
     "minimist": "0.0.5",
     "cli-table": "~0.2.0",
-    "wrench": "~1.5.4"
+    "wrench": "~1.5.4",
+    "pg.js": "^3.0.4"
   },
   "devDependencies": {
     "coffee-script": "~1.6.2",
