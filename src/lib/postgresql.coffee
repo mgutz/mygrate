@@ -109,8 +109,10 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
       insert into schema_migrations(version, up, down)
       values($1, $2, $3)
     """
-    @using (err, client) ->
-      client.query sql, [version, up, down], cb
+    @using (err, client, release) ->
+      client.query sql, [version,up,down], () ->
+        release()
+        cb()
 
 
   remove: (version, cb) ->
@@ -118,8 +120,9 @@ PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} 
       delete from schema_migrations
       where version = $1
     """
-    @using (err, client) ->
+    @using (err, client,release) ->
       client.query sql, [version], (err) ->
+        release()
         cb err
 
 
