@@ -5,21 +5,47 @@ Async = require("async")
 Prompt = require("prompt")
 Prompt.message = ''
 Pg = require("pg.js")
+Transaction = require("./pg-transaction")
 
+
+###
+# Finds the line, col based on error.position
+###
+errorToLineCol = (sql, err) ->
+  message = err.message
+  position = err.position - 1 # postgres 1-based
+  line = 1
+  column = 1
+  max = sql.length
+
+  i = 0
+  while i < max and i < position
+    ch = sql[i]
+    if ch is '\r'
+      line++
+      column = 1
+      # account for windows
+      if i+1 < max
+        if sql[i+1] is '\n'
+          i++
+    else if ch is '\n'
+      line++
+      column = 1
+    else
+      column++
+    i++
+  {message, line, column}
 
 class Postgresql
   constructor: (@config) ->
     @config.host = 'localhost' unless @config.host?
     @config.port = 5432 unless @config.port?
-    process.env.PGPASSWORD = @config.password
-
 
   using: (config, cb) ->
     if arguments.length == 1
       cb = config
       config = @config
     Pg.connect config, cb
-
 
   exec: (sql, cb) ->
     @using (err, client, release) ->
@@ -40,31 +66,50 @@ class Postgresql
     args = ["-U", @config.user, "-q", "-d", @config.database, "-h", host, "-p", port, "--file=#{filename}", "-1", "--set", "ON_ERROR_STOP=1"]
     Utils.spawn command, args, {
       cwd: Path.dirname(filename)
-      # env:
-      #   PGPASSWORD: @config.password
+      env_add:
+        PGPASSWORD: @config.password
     }, cb
 
+  execFileDriver: (filename, cb) ->
+    try
+      script = Fs.readFileSync(filename, 'utf8')
+    catch err
+      return cb(err)
 
-  dbConsoleScript: ->
-    port = @config.port || 5432
-    host = @config.host || "localhost"
-    # TODO need comparable script on Windows
-    Fs.writeFileSync "migrations/dbconsole", """#!/bin/sh
-PGPASSWORD="#{@config.password}" psql -U #{@config.user} -d #{@config.database} -h #{host} -p #{port}
-""", {mode: 0o755}
+    @using (err, client, release) ->
+      tx = new Transaction(client)
+      tx.begin()
+      tx.savepoint('mygrate')
+      client.query script, (err, result) ->
+        release()
+        if err
+          tx.rollback('mygrate')
+          tx.release('mygrate')
+          if err.position
+            info = errorToLineCol(script, err)
+            console.error "#{Path.basename(filename)} [#{info.line}, #{info.column}] #{info.message}\n"
+            return cb(1)
+          else
+            return cb(err)
+        tx.release('mygrate')
+        tx.commit cb
 
-  "console": ->
+  console: ->
     port = @config.port || 5432
     host = @config.host || "localhost"
     command = "psql"
     args = ["-U", @config.user, "-d", @config.database, "-h", host, "-p", port]
     Utils.spawn command, args, {
       stdio: 'inherit'
+      env_add:
+        PGPASSWORD: @config.password
     }, (code) ->
       process.exit code
 
+
   execFile: (args...) ->
-    @execFileCLI args...
+    #@execFileCLI args...
+    @execFileDriver args...
 
 
   init: (cb) ->

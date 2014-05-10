@@ -491,7 +491,8 @@ Commands =
         for migration in migrations
           at = timestamp(new Date(migration.created_at), "-")
           table.push [at, migration.version]
-        console.log(table.toString())
+        console.log ""
+        console.log table.toString()
       process.exit 0
 
   dropDatabase: ->

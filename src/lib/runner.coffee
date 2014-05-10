@@ -17,6 +17,7 @@ showUsage = ->
 
   Commands:
 
+    console         Runs database CLI
     createdb        (Re)Create database from config.js and $NODE_ENV
     down            Undo {COUNT|VERSION|all} migrations.
     dropdb          Drops the database
@@ -29,10 +30,19 @@ showUsage = ->
 
   Options:
 
+        --examples  output examples
     -h, --help      output usage information
     -V, --version   output the version number
+"""
+
+showExamples = ->
+  console.log """
+  #{pkg.name} #{pkg.version}
 
   Examples:
+
+    # start database CLI utility
+    mygrate console
 
     # undo last 3 applied migrations in the database
     mygrate down 3
@@ -71,8 +81,12 @@ else if argv.help
 else if argv.version
   console.log pkg.name + " " + pkg.version
 
+else if argv.examples
+  showExamples()
+
 else if command.match(/\.sql$/)
   commands.execFile {_: ["file", command]}
+
 
 else if command
   commands =

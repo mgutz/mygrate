@@ -1,2 +1,0 @@
-#!/bin/sh
-PGPASSWORD="!development" psql -U development -d db_development -h localhost -p 5432
