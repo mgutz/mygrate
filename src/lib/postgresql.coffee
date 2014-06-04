@@ -8,10 +8,29 @@ Pg = require("pg.js")
 Transaction = require("./pg-transaction")
 
 
+SqlError = (message, filename, line, column) ->
+  this.name = "SqlError"
+  this.message = message
+  this.filename = filename
+  this.line = line
+  this.column = column
+SqlError.prototype = new Error()
+SqlError::constructor = SqlError
+
+
 ###
 # Finds the line, col based on error.position
 ###
-errorToLineCol = (sql, err) ->
+toSqlError = (filename, err, sql="") ->
+  if not err.position?
+    return err.message
+
+  if not sql
+    try
+      sql = Fs.readFileSync(filename, 'utf8')
+    catch err
+      return err
+
   message = err.message
   position = err.position - 1 # postgres 1-based
   line = 1
@@ -34,7 +53,15 @@ errorToLineCol = (sql, err) ->
     else
       column++
     i++
-  {message, line, column}
+
+  new SqlError(message, filename, line, column)
+
+
+
+savepointId = 0
+nextSavepoint = ->
+  savepointId += 1
+  "mygrate" + savepointId
 
 class Postgresql
   constructor: (@config) ->
@@ -57,6 +84,13 @@ class Postgresql
         #   console.error(err)
         cb err, result
 
+  logError: (err) ->
+    if err.position
+      info = errorToLineCol(script, err)
+      console.error "#{Path.basename(filename)} [#{info.line}, #{info.column}] #{info.message}\n"
+      return cb(err)
+
+
 
   execFileCLI: (filename, cb) ->
     port = @config.port || 5432
@@ -77,21 +111,19 @@ class Postgresql
       return cb(err)
 
     @using (err, client, release) ->
+      savepoint = nextSavepoint()
       tx = new Transaction(client)
       tx.begin()
-      tx.savepoint('mygrate')
+      tx.savepoint(savepoint)
       client.query script, (err, result) ->
         release()
         if err
-          tx.rollback('mygrate')
-          tx.release('mygrate')
-          if err.position
-            info = errorToLineCol(script, err)
-            console.error "#{Path.basename(filename)} [#{info.line}, #{info.column}] #{info.message}\n"
-            return cb(1)
-          else
-            return cb(err)
-        tx.release('mygrate')
+          tx.rollback(savepoint)
+          tx.release(savepoint)
+          err = toSqlError(filename, err, script)
+          console.error err
+          return cb(1)
+        tx.release(savepoint)
         tx.commit cb
 
   console: ->

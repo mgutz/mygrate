@@ -43,16 +43,16 @@ getEnvConfig = ->
 
 getConfig = ->
   try
-    require(process.cwd()+"/migrations/config.json")
+    require(Commands.migrationsDir+"/config.json")
   catch
     # legacy version used config.js
-    if Fs.existsSync(process.cwd()+"/migrations/config.js")
-      oldConfig = require(process.cwd()+"/migrations/config")
+    if Fs.existsSync(Commands.migrationsDir+"/config.js")
+      oldConfig = require(Commands.migrationsDir+"/config")
       writeConfig oldConfig
 
       console.error """
-      migrations/config.js has been converted to migrations/config.json.
-      Delete migrations/config.js at your convenience.
+      #{Commands.migrationsBasename}/config.js has been converted to #{Commands.migrationsBasename}/config.json.
+      Delete #{Commands.migrationsBasename}/config.js at your convenience.
 """
     else
       console.error "Config file migration/config.json NOT FOUND"
@@ -61,12 +61,12 @@ getConfig = ->
 
 
 writeConfig = (config) ->
-  Fs.writeFileSync process.cwd()+"/migrations/config.json", JSON.stringify(config, null, '  ')
+  Fs.writeFileSync Commands.migrationsDir+"/config.json", JSON.stringify(config, null, '  ')
 
 
 dbInterface = ->
-  if !Fs.existsSync("migrations")
-    console.error("migrations directory not found")
+  if !Fs.existsSync(Commands.migrationsDir)
+    console.error("#{Commands.migrationsBasename} directory not found")
     process.exit 1
 
   config = getEnvConfig()
@@ -97,12 +97,12 @@ timestamp = (date=new Date(), separator="") ->
 
 
 initMigrationsDir = (vendor, config) ->
-  unless Fs.existsSync("./migrations")
-    Fs.mkdirSync("./migrations")
+  unless Fs.existsSync(Commands.migrationsDir)
+    Fs.mkdirSync(Commands.migrationsDir)
 
-  unless Fs.existsSync("./migrations/config.json")
+  unless Fs.existsSync(Commands.migrationsDir + "/config.json")
     writeConfig config
-    console.log "Created #{vendor} sample configuration. Edit migrations/config.json."
+    console.log "Created #{vendor} sample configuration. Edit #{Commands.migrationsBasename}/config.json."
 
 
 getSubDirs = (dirname, cb) ->
@@ -117,7 +117,7 @@ getSubDirs = (dirname, cb) ->
 
 
 migrationFile = (version, which) ->
-  Path.resolve("migrations/"+version+"/"+which+".sql")
+  Path.resolve(Commands.migrationsDir+"/"+version+"/"+which+".sql")
 
 readMigrationFile = (migration, which) ->
   filename = migrationFile(migration, which)
@@ -130,12 +130,13 @@ readMigrationFile = (migration, which) ->
 down = (schema, migrations, cb) ->
   migrate = (version, cb) ->
     filename = migrationFile(version, "down")
+    pre = "Down #{Commands.migrationsBasename}/#{version}"
     schema.execFile filename, (err) ->
-      return cb("Down migrations/#{version}: #{err}") if err
+      return cb("#{pre}\n#{err}") if err
 
       schema.remove version, (err) ->
-        return cb("Down migrations/#{version}: #{err}") if err
-        console.log "Down migrations/#{version}"
+        return cb("#{pre}\n#{err}") if err
+        console.log "#{pre}"
         cb null
 
   async.forEachSeries migrations, migrate, cb
@@ -148,6 +149,12 @@ forceDown = (schema, version, cb) ->
 
 ## COMMANDS
 Commands =
+  migrationsDir: null
+  migrationsBasename: null
+
+  setMigrationsDir:(dirname) ->
+    Commands.migrationsDir = Path.resolve(dirname)
+    Commands.migrationsBasename = Path.basename(Commands.migrationsDir)
 
   "console": ->
     {schema} = dbInterface()
@@ -165,8 +172,8 @@ Commands =
     if !vendor
       {vendor} = dbInterface()
 
-    if !Fs.existsSync(Path.resolve("migrations"))
-      console.error "ERROR migrations directory not found. Try `mygrate init`"
+    if !Fs.existsSync(Path.resolve(Commands.migrationsBasename))
+      console.error "ERROR #{Commands.migrationBasename} directory not found. Try `mygrate init`"
       process.exit 1
 
     if typeof suffix isnt "string"
@@ -178,7 +185,7 @@ Commands =
     if typeof suffix is "string"
       filename += "-"+suffix
 
-    path = "./migrations/"+filename
+    path = Commands.migrationsDir +  "/"+filename
     unless Fs.existsSync(path)
       Wrench.copyDirSyncRecursive Path.resolve(__dirname, "../src/templates/#{vendor}/#{template}"), Path.resolve(path)#, forceDelete: true
 
@@ -271,7 +278,7 @@ Commands =
         schema.init cb
 
       getMigrationDirs: (cb) ->
-        getSubDirs "migrations", (err, subdirs) ->
+        getSubDirs Commands.migrationsDir, (err, subdirs) ->
           return cb(err) if err
           dirs = subdirs.sort()
           cb null
@@ -292,7 +299,7 @@ Commands =
           migrateUp = (version, cb) ->
             async.series {
               prehook: (cb) ->
-                filename = Path.resolve("migrations/#{version}/prehook")
+                filename = Commands.migrationsDir + "/#{version}/prehook"
                 if Fs.existsSync(filename)
                   timestamp = version.slice(0, 12)
                   if minHookDate.slice(0, 12) > timestamp
@@ -307,14 +314,14 @@ Commands =
               upscript: (cb) ->
                 filename = migrationFile(version, "up")
                 schema.execFile filename, (err) ->
-                  return cb("Up migrations/#{version}: exit code #{err}") if err
+                  return cb("Up #{Commands.migrationsBasename}/#{version}: exit code #{err}") if err
 
                   up = readMigrationFile(version, "up")
                   down = readMigrationFile(version, "down")
                   schema.add version, up, down, (err) ->
                     return cb(err) if err
 
-                    console.log "Up migrations/#{version}"
+                    console.log "Up #{Commands.migrationsBasename}/#{version}"
                     cb null
             }, cb
 
@@ -323,7 +330,7 @@ Commands =
         else
           msg = "Nothing to run."
           if lastMigration?.version
-            msg += " Last recorded migration: migrations/"+lastMigration.version
+            msg += " Last migration: #{Commands.migrationsBasename}/"+lastMigration.version
           console.log msg
           cb null
     }, (err) ->
@@ -352,7 +359,7 @@ Commands =
           cb err
 
       getMigrationDirs: (cb) ->
-        getSubDirs "migrations", (err, subdirs) ->
+        getSubDirs Commands.migrationsDir, (err, subdirs) ->
           return cb(err) if err
           dirs = subdirs
           cb null

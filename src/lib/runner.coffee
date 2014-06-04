@@ -6,6 +6,8 @@ argv = require("minimist")(process.argv.slice(2), {
     version: "V"
     help: "h"
     template: "t"
+  default:
+    directory: "migrations"
 })
 command = argv._[0]
 
@@ -30,6 +32,7 @@ showUsage = ->
 
   Options:
 
+        --directory use different directory than migrations
         --examples  output examples
     -h, --help      output usage information
     -V, --version   output the version number
@@ -71,6 +74,8 @@ showExamples = ->
     # run any other file not having .sql extension
     mygrate file mygrations/test
 """
+
+commands.setMigrationsDir argv.directory
 
 if process.argv.length == 2
   commands.history()
