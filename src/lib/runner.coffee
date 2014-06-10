@@ -3,6 +3,7 @@ pkg = require('../package.json')
 
 argv = require("minimist")(process.argv.slice(2), {
   alias:
+    exec: "e"
     version: "V"
     help: "h"
     template: "t"
@@ -29,6 +30,7 @@ showUsage = ->
     last            Undo last dir if applied and migrate up
     new             Generate new migration directory
     up              Execute new migrations.
+    exec            Execute an expression.
 
   Options:
 
@@ -89,9 +91,8 @@ else if argv.version
 else if argv.examples
   showExamples()
 
-else if command.match(/\.sql$/)
+else if command?.match(/\.sql$/)
   commands.execFile {_: ["file", command]}
-
 
 else if command
   commands =
@@ -105,6 +106,7 @@ else if command
     init: commands.init
     "new": commands.generate
     up: commands.migrateUp
+    exec: commands.execSql
 
   fn = commands[command]
   if fn

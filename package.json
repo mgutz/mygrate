@@ -1,22 +1,23 @@
 {
   "author": "Mario Gutierrez <mario@mgutz.com>",
   "name": "mygrate",
-  "description": "SQL based migration utility for PostgreSQL and MySQL",
-  "version": "0.3.0-pre",
+  "description": "SQL based migration utility for Postgres, Sql Server and MySQL",
+  "version": "0.5.0-pre",
   "bin": {
     "mygrate": "./bin/mygrate",
     "myg": "./bin/mygrate"
   },
   "dependencies": {
-    "async": "~0.9.0",
-    "underscore": "~1.4.4",
-    "prompt": "~0.2.9",
-    "minimist": "0.0.5",
+    "async": "^0.9.0",
     "cli-table": "^0.3.0",
+    "lodash": "^2.4.1",
+    "minimist": "0.0.5",
+    "prompt": "~0.2.9",
+    "uber-ngen": "^3.4.0",
+    "underscore.string": "^2.3.3",
     "wrench": "~1.5.4"
   },
   "devDependencies": {
-    "pg.js": "^3.0.4",
     "coffee-script": "~1.7.1",
     "mysql": "2.3.0"
   },

@@ -4,9 +4,7 @@ Utils = require("./utils")
 Async = require("async")
 Prompt = require("prompt")
 Prompt.message = ''
-Pg = require("pg.js")
-Transaction = require("./pg-transaction")
-
+Postgres = require('dalicious/dalicious-postgres')
 
 SqlError = (message, filename, line, column) ->
   this.name = "SqlError"
@@ -57,40 +55,21 @@ toSqlError = (filename, err, sql="") ->
   new SqlError(message, filename, line, column)
 
 
-
-savepointId = 0
-nextSavepoint = ->
-  savepointId += 1
-  "mygrate" + savepointId
-
 class Postgresql
   constructor: (@config) ->
     @config.host = 'localhost' unless @config.host?
     @config.port = 5432 unless @config.port?
+    @UserDb = Postgres.define(@config)
 
-  using: (config, cb) ->
-    if arguments.length == 1
-      cb = config
-      config = @config
-    Pg.connect config, cb
-
-  exec: (sql, cb) ->
-    @using (err, client, release) ->
-      return cb(err) if err
-
-      client.query sql, (err, result) ->
-        release()
-        # if err
-        #   console.error(err)
-        cb err, result
+  exec: (cmd, cb) ->
+    @store ?= new @UserDb()
+    @store.sql(cmd).exec cb
 
   logError: (err) ->
     if err.position
       info = errorToLineCol(script, err)
       console.error "#{Path.basename(filename)} [#{info.line}, #{info.column}] #{info.message}\n"
       return cb(err)
-
-
 
   execFileCLI: (filename, cb) ->
     port = @config.port || 5432
@@ -110,20 +89,15 @@ class Postgresql
     catch err
       return cb(err)
 
-    @using (err, client, release) ->
-      savepoint = nextSavepoint()
-      tx = new Transaction(client)
-      tx.begin()
-      tx.savepoint(savepoint)
-      client.query script, (err, result) ->
-        release()
-        if err
-          tx.rollback(savepoint)
-          tx.release(savepoint)
-          err = toSqlError(filename, err, script)
-          console.error err
+    tx = @store.transactable()
+    tx.begin()
+    tx.sql(script).exec (err, result) ->
+      if err
+        err = toSqlError(filename, err, script)
+        console.error err
+        tx.rollback ->
           return cb(1)
-        tx.release(savepoint)
+      else
         tx.commit cb
 
   console: ->
@@ -163,9 +137,9 @@ class Postgresql
       order by version desc
       limit 1;
     """
-    @exec sql, (err, result) ->
+    @exec sql, (err, rows) ->
       return cb(err) if err
-      cb null, result.rows[0]
+      cb null, rows[0]
 
 
   all: (cb) ->
@@ -174,11 +148,11 @@ class Postgresql
       from schema_migrations
       order by version desc;
     """
-    @exec sql, (err, result) ->
+    @exec sql, (err, rows) ->
       if err?.message?.indexOf('"schema_migrations" does not exist') > 0
         return cb(null, [])
       return cb(err) if err
-      cb null, result.rows
+      cb null, rows
 
 
   add: (version, up, down, cb) ->
@@ -186,10 +160,7 @@ class Postgresql
       insert into schema_migrations(version, up, down)
       values($1, $2, $3)
     """
-    @using (err, client, release) ->
-      client.query sql, [version,up,down], () ->
-        release()
-        cb()
+    @store.sql(sql, [version,up,down]).exec cb
 
 
   remove: (version, cb) ->
@@ -197,10 +168,7 @@ class Postgresql
       delete from schema_migrations
       where version = $1
     """
-    @using (err, client,release) ->
-      client.query sql, [version], (err) ->
-        release()
-        cb err
+    @store.sql(sql, [version]).exec cb
 
 
   # Creates the deploy specific environemnt database from migrations/config.js
@@ -233,18 +201,18 @@ class Postgresql
           "create database #{config.database} owner #{config.user};"
       ]
 
+      rootConfig =
+        user: user
+        password: password
+        host: config.host
+        port: config.port
+        database: "postgres"
+      RootDb = Postgres.define(rootConfig)
+      store = new RootDb()
+
       execRootSql = (sql, cb) ->
-        rootConfig =
-          user: user
-          password: password
-          host: config.host
-          port: config.port
-          database: "postgres"
-
-        using rootConfig, (err, client) ->
-          console.error(err) if err
-          client.query sql, cb
-
+        console.log 'SQL', sql
+        store.sql(sql).exec cb
 
       Async.forEachSeries statements, execRootSql, (err) ->
         if (err)
@@ -272,7 +240,6 @@ class Postgresql
 
     self = @
     config = @config
-    using = @using
 
     prompts = [
       { name: 'user', description: 'root user', default: defaultUser }
@@ -290,17 +257,17 @@ class Postgresql
           "drop user if exists #{config.user};"
       ]
 
-      execRootSql = (sql, cb) ->
-        rootConfig =
-          user: user
-          password: password
-          host: config.host
-          port: config.port
-          database: "postgres"
+      rootConfig =
+        user: user
+        password: password
+        host: config.host
+        port: config.port
+        database: "postgres"
+      RootDb = Postgres.define(rootConfig)
+      store = new RootDb()
 
-        using rootConfig, (err, client) ->
-          console.error(err) if err
-          client.query sql, cb
+      execRootSql = (sql, cb) ->
+        store.sql(sql).exec cb
 
       Async.forEachSeries statements, execRootSql, (err) ->
         if (err)
@@ -313,7 +280,6 @@ class Postgresql
 """
           console.log "OK"
           process.exit 0
-
 
 module.exports = Postgresql
 

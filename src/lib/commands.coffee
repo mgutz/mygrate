@@ -4,8 +4,10 @@ async = require("async")
 Utils = require("./utils")
 Table = require("cli-table")
 Os = require("os")
-_ = require("underscore")
+_ = require("lodash")
 Wrench = require("wrench")
+str = require('underscore.string')
+ProjTemplate = require('uber-ngen')
 
 cwd = process.cwd()
 
@@ -22,14 +24,17 @@ errHandler = (err) ->
 
 
 getDefaultUser = (vendor) ->
-  if vendor == 'mysql'
-    user = 'root'
-  else
-    platform = Os.platform()
-    if platform.match(/^darwin/)
-      user = process.env.USER
+  switch vendor
+    when 'mysql'
+      user = 'root'
+    when 'mssql'
+      user = 'sa'
     else
-      user = 'postgres'
+      platform = Os.platform()
+      if platform.match(/^darwin/)
+        user = process.env.USER
+      else
+        user = 'postgres'
   return user
 
 
@@ -187,7 +192,7 @@ Commands =
 
     path = Commands.migrationsDir +  "/"+filename
     unless Fs.existsSync(path)
-      Wrench.copyDirSyncRecursive Path.resolve(__dirname, "../src/templates/#{vendor}/#{template}"), Path.resolve(path)#, forceDelete: true
+      Wrench.copyDirSyncRecursive Path.resolve(__dirname, "../templates/#{vendor}/content/#{template}"), Path.resolve(path)#, forceDelete: true
 
       # update minHookDate so prehooks will run with this migration
       if template != 'default'
@@ -202,69 +207,24 @@ Commands =
   init: (argv) =>
     vendor = argv._[1]
 
-    if ['mysql', 'postgresql'].indexOf(vendor) < 0
+    if ['mysql', 'postgresql', 'mssql'].indexOf(vendor) < 0
       vendor = "postgresql"
 
     name = Path.basename(process.cwd()).replace(/\W/g, "_")
 
-    switch vendor
-      when 'mysql'
-        config =
-          development:
-            mygrate:
-              minHookDate: DEFAULT_MINHOOK_DATE
-            mysql:
-              host: "localhost",
-              database: "#{name}_dev"
-              user: "#{name}_dev_user"
-              password: "dev",
-              port: 3306
-
-          test:
-            mysql:
-              host: "localhost",
-              database: "#{name}_test"
-              user: "#{name}_test_user"
-              password: "test"
-              port: 3306
-
-          production:
-            mysql:
-              host: "localhost"
-              database: "#{name}_prod"
-              user: "#{name}_prod_user"
-              password: "prod"
-              port: 3306
-
-      when 'postgres', 'postgresql'
-        config =
-          development:
-            mygrate:
-              minHookDate: DEFAULT_MINHOOK_DATE
-            postgresql:
-              host: "localhost"
-              database: "#{name}_dev"
-              user: "#{name}_dev_user"
-              password: "dev"
-
-          test:
-            postgresql:
-              host: "localhost"
-              database: "#{name}_test"
-              user: "#{name}_test_user"
-              password: "test"
-
-          production:
-            postgresql:
-              host: "localhost"
-              database: "#{name}_prod"
-              user: "#{name}_prod_user"
-              password: "prod"
-
-    initMigrationsDir vendor, config
-    # make it appear like mygrate new init
-    argv._ = ["new", "init"]
-    Commands.generate argv, vendor
+    if Fs.existsSync(Commands.migrationsDir)
+      console.error 'Migrations directory exists.'
+      return
+    t = new ProjTemplate(vendor, {
+      templates: Path.join(__dirname, '../templates')
+      name: name
+    })
+    t.init Commands.migrationsDir, (err) ->
+      throw err if err
+      #initMigrationsDir vendor, config
+      # make it appear like mygrate new init
+      argv._ = ["new", "init"]
+      Commands.generate argv, vendor
 
 
   # Runs all `up` migrations not yet executed on the database.
@@ -465,7 +425,7 @@ Commands =
     s = "Connection: "
     s += config.user
     #s += ":"+config.password.replace(/./g, '*') if config.password
-    s += "@"+config.host
+    s += "@" + (config.host || config.server)
     s += ":"+config.port if config.port
     s += "/"+config.database if config.database
     console.log s
@@ -509,6 +469,21 @@ Commands =
   createDatabase: ->
     {schema, vendor} = dbInterface()
     schema.createDatabase getDefaultUser(vendor)
+
+  execSql: (argv) ->
+    sql = argv._[1]
+    throw new Error('Empty SQL expression') unless sql?.trim().length > 0
+    db = dbInterface().schema
+    db.exec sql, (err, result) ->
+      if err
+        throw new Error(err)
+      else
+        if result
+          console.log JSON.stringify(result, null, 2)
+        else
+          console.log "Empty result"
+        process.exit 0
+
 
   execFile: (argv) ->
     filename = argv._[1]

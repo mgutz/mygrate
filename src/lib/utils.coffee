@@ -1,5 +1,5 @@
 spawn = require('child_process').spawn
-_ = require('underscore')
+_ = require('lodash')
 
 exports.spawn = (command, args, opts, cb) ->
   cmd = spawn(command, args, opts)

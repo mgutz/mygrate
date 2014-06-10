@@ -1,18 +1,11 @@
 # mygrate
 
-Database migrations for MySQL and PostgreSQL database using the database
-provided CLI utilities, `mysql` and `psql` respectively. The end goal is
-to have migration scripts that can be run by a DBA without having to install
-anything on the production server.
+Database migrations for MySQL, PostgreSQL and SQL Server database using plain
+SQL files. The end goal is to have migration scripts that can be run by a DBA.
 
 ## Installation
 
     npm install -g mygrate
-
-Depending on your database, you will need to install either
-
-    npm install pg
-    npm install mysql
 
 ## Walkthrough
 
@@ -20,8 +13,9 @@ For a project without migrations, mygrate creates a `migrations`
 directory and `migrations/config.js` example which MUST BE edited for your
 database. Run one of the following commands
 
-    mygrate init postgresql
-    mygrate init mysql
+    mygrate init postgresql             # Postgresql
+    mygrate init mssql                  # Sql Server
+    mygrate init mysql                  # MySQL
 
 Next step is to create the database in the config if it does not
 already exist. Mygrate will prompt for root user and password. Run

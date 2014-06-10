@@ -1,0 +1,32 @@
+{
+  "development": {
+    "mssql": {
+      "server": "192.168.14.178",
+      "database": "{{name}}Dev",
+      "user": "{{name}}_dev_user",
+      "password": "DevDev00",
+      "port": 1433,
+      "verbose": false,
+      "promisify": false,
+      "batchSeparator": "GO"
+    }
+  },
+  "test": {
+    "mssql": {
+      "server": "localhost",
+      "database": "{{name}}Test",
+      "user": "{{name}}_test_user",
+      "password": "TestTest00",
+      "port": 1433
+    }
+  },
+  "production": {
+    "mssql": {
+      "server": "localhost",
+      "database": "{{name}}Prod",
+      "user": "{{name}}_production_user",
+      "password": "Production1",
+      "port": 1433
+    }
+  }
+}
