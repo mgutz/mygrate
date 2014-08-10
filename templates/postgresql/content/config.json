@@ -11,7 +11,7 @@
     "postgresql": {
       "host": "localhost",
       "database": "{{name}}_test",
-      "user": "{{Name}}",
+      "user": "{{name}}",
       "password": "!test"
     }
   },
