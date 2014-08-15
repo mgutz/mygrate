@@ -495,4 +495,13 @@ Commands =
     {schema} = dbInterface()
     schema.execFile filename, errHandler
 
+  ping: (argv) ->
+    sql = "select 1;"
+    db = dbInterface().schema
+    db.exec sql, (err, result) ->
+      if err
+        process.exit 1
+      else
+        process.exit  0
+
 module.exports = Commands

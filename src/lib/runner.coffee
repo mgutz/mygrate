@@ -29,6 +29,7 @@ showUsage = ->
     init            Creates migration directory with config
     last            Undo last dir if applied and migrate up
     new             Generate new migration directory
+    ping            Pings the database (0 exit code means OK)
     up              Execute new migrations.
     exec            Execute an expression.
 
@@ -105,6 +106,7 @@ else if command
     last: commands.migrateLast
     init: commands.init
     "new": commands.generate
+    ping: commands.ping
     up: commands.migrateUp
     exec: commands.execSql
 
