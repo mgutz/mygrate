@@ -270,11 +270,11 @@ Commands =
                 if !Fs.existsSync(filename)
                   return cb()
 
-                console.log "DBG: Running #{filename}"
                 schema.execFile filename, {notx: true}, (err) ->
-                  console.log "DBG: Finished running #{filename}"
-                  return cb(err)
+                    return cb(err) if err
 
+                    console.log "NoTx #{Commands.migrationsBasename}/#{version}"
+                    return cb()
 
               upscript: (cb) ->
                 filename = migrationFile(version, "up")
