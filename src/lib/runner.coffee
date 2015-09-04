@@ -27,7 +27,7 @@ showUsage = ->
     file            Execute SQL script in file
     history         Show migrations in database. (default)
     init            Creates migration directory with config
-    last            Undo last dir if applied and migrate up
+    redo            Undo last dir if applied and migrate up
     new             Generate new migration directory
     ping            Pings the database (0 exit code means OK)
     up              Execute new migrations.
@@ -103,12 +103,13 @@ else if command
     dropdb: commands.dropDatabase
     file: commands.execFile
     history: commands.history
-    last: commands.migrateLast
+    redo: commands.migrateLast
     init: commands.init
     "new": commands.generate
     ping: commands.ping
     up: commands.migrateUp
     exec: commands.execSql
+    e: commands.execSql
 
   fn = commands[command]
   if fn

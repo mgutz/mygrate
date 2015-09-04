@@ -47,26 +47,19 @@ getEnvConfig = ->
 
 
 getConfig = ->
-  try
-    require(Commands.migrationsDir+"/config.json")
-  catch
-    # legacy version used config.js
-    if Fs.existsSync(Commands.migrationsDir+"/config.js")
-      oldConfig = require(Commands.migrationsDir+"/config")
-      writeConfig oldConfig
+  jsFile = Path.join(Commands.migrationsDir,  "config.js")
+  jsonFile = Path.join(Commands.migrationsDir,  "config.json")
 
-      console.error """
-      #{Commands.migrationsBasename}/config.js has been converted to #{Commands.migrationsBasename}/config.json.
-      Delete #{Commands.migrationsBasename}/config.js at your convenience.
-"""
-    else
-      console.error "Config file migration/config.json NOT FOUND"
-
+  if Fs.existsSync(jsFile)
+    return require(jsFile)
+  else if Fs.existsSync(jsonFile)
+    return require(jsonFile)
+  else
+    console.error "Config file migrations/config.{js,json} NOT FOUND"
     process.exit 1
 
-
 writeConfig = (config) ->
-  Fs.writeFileSync Commands.migrationsDir+"/config.json", JSON.stringify(config, null, '  ')
+  Fs.writeFileSync Path.join(Commands.migrationsDir, "config.json"), JSON.stringify(config, null, '  ')
 
 
 dbInterface = ->
@@ -270,6 +263,18 @@ Commands =
                   Utils.spawn filename, [], {cwd: Path.dirname(filename)}, cb
                 else
                   cb()
+
+              # some migrations need to be run outside of transaction
+              notx: (cb) ->
+                filename = migrationFile(version, "notx")
+                if !Fs.existsSync(filename)
+                  return cb()
+
+                console.log "DBG: Running #{filename}"
+                schema.execFile filename, {notx: true}, (err) ->
+                  console.log "DBG: Finished running #{filename}"
+                  return cb(err)
+
 
               upscript: (cb) ->
                 filename = migrationFile(version, "up")

@@ -83,22 +83,36 @@ class Postgresql
         PGPASSWORD: @config.password
     }, cb
 
-  execFileDriver: (filename, cb) ->
+  execFileDriver: (filename, opts, cb) ->
+    tx = null
+
+    if typeof opts == 'function'
+      cb = opts
+      opts = {}
+
     try
       script = Fs.readFileSync(filename, 'utf8')
     catch err
       return cb(err)
 
-    tx = @store.transactable()
-    tx.begin()
-    tx.sql(script).exec (err, result) ->
-      if err
-        err = toSqlError(filename, err, script)
-        console.error err
-        tx.rollback ->
+    if opts.notx
+      @store.sql(script).exec (err, result) ->
+        if err
+          err = toSqlError(filename, err, script)
+          console.error err
           return cb(1)
-      else
-        tx.commit cb
+        return cb()
+    else
+      tx = @store.transactable()
+      tx.begin()
+      tx.sql(script).exec (err, result) ->
+        if err
+          err = toSqlError(filename, err, script)
+          console.error err
+          tx.rollback ->
+            return cb(1)
+        else
+          tx.commit cb
 
   console: ->
     port = @config.port || 5432
