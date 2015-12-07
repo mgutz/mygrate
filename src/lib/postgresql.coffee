@@ -209,6 +209,14 @@ class Postgresql
       password = null if password.trim().length == 0
 
       statements = [
+          # kill all connections first
+          # NOTE: pid is procpid in PostgreSQL < 9.2
+          """
+            select pg_terminate_backend(pid)
+            from pg_stat_activity
+            where datname='#{config.database}'
+              and pid <> pg_backend_pid()
+          """
           "drop database if exists #{config.database};"
           "drop user if exists #{config.user};"
           "create user #{config.user} password '#{config.password}' SUPERUSER CREATEROLE;"
