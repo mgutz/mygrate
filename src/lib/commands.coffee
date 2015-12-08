@@ -467,13 +467,13 @@ Commands =
         console.log table.toString()
       process.exit 0
 
-  dropDatabase: ->
+  dropDatabase: (argv) ->
     {schema, vendor} = dbInterface()
-    schema.dropDatabase getDefaultUser(vendor)
+    schema.dropDatabase getDefaultUser(vendor), argv
 
-  createDatabase: ->
+  createDatabase: (argv) ->
     {schema, vendor} = dbInterface()
-    schema.createDatabase getDefaultUser(vendor)
+    schema.createDatabase getDefaultUser(vendor), argv
 
   execSql: (argv) ->
     sql = argv._[1]

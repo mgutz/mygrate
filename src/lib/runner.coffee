@@ -4,9 +4,11 @@ pkg = require('../package.json')
 argv = require("minimist")(process.argv.slice(2), {
   alias:
     exec: "e"
-    version: "V"
-    help: "h"
+    help: "?"
+    password: "W"
     template: "t"
+    user: "U"
+    version: "V"
   default:
     directory: "migrations"
 })
@@ -37,7 +39,9 @@ showUsage = ->
 
         --directory use different directory than migrations
         --examples  output examples
-    -h, --help      output usage information
+    -?, --help      output usage information
+    -U, --username  superuser username
+    -W, --password  superuser password
     -V, --version   output the version number
 """
 

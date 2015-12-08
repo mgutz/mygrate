@@ -184,19 +184,9 @@ class Postgresql
     """
     @store.sql(sql, [version]).exec cb
 
-
-  # Creates the deploy specific environemnt database from migrations/config.js
-  # using a root user instead of the user defined in config.js.
-  #
-  # @param {String} deployEnv
-  createDatabase: (defaultUser) ->
+  promptSuperUser: (defaultUser, cb) ->
     Prompt.delimiter = ""
     Prompt.start()
-
-    self = @
-    config = @config
-    using = @using
-
     prompts = [
       { name: 'user', description: 'root user', default: defaultUser }
       { name: 'password', hidden: true}
@@ -204,7 +194,24 @@ class Postgresql
       # { name: 'port', default: '5432'}
     ]
 
-    Prompt.get prompts, (err, result) ->
+    Prompt.get prompts, cb
+
+
+  argvSuperUser: (argv, cb) ->
+    cb null, {user: argv.user, password: argv.password ? ""}
+
+
+  # Creates the deploy specific environemnt database from migrations/config.js
+  # using a root user instead of the user defined in config.js.
+  #
+  # @param {String} defaultUser
+  # @param {Object} argv
+  createDatabase: (defaultUser, argv) ->
+    self = @
+    config = @config
+    using = @using
+
+    doCreate = (err, result) ->
       {user, password, host, port} = result
       password = null if password.trim().length == 0
 
@@ -252,25 +259,22 @@ class Postgresql
           console.log "OK"
           process.exit 0
 
+    if argv.user
+      @argvSuperUser argv, doCreate
+    else
+      @promptSuperUser defaultUser, doCreate
+
+
   # Creates the deploy specific environemnt database from migrations/config.js
   # using a root user instead of the user defined in config.js.
   #
-  # @param {String} deployEnv
-  dropDatabase: (defaultUser) ->
-    Prompt.delimiter = ""
-    Prompt.start()
-
+  # @param {String} defaultUser
+  # @param {Object} argv
+  dropDatabase: (defaultUser, argv) ->
     self = @
     config = @config
 
-    prompts = [
-      { name: 'user', description: 'root user', default: defaultUser }
-      { name: 'password', hidden: true}
-      # { name: 'host', default: 'localhost'}
-      # { name: 'port', default: '5432'}
-    ]
-
-    Prompt.get prompts, (err, result) ->
+    doDrop = (err, result) ->
       {user, password, host, port} = result
       password = null if password.trim().length == 0
 
@@ -302,6 +306,11 @@ class Postgresql
 """
           console.log "OK"
           process.exit 0
+
+    if argv.user
+      @argvSuperUser argv, doDrop
+    else
+      @promptSuperUser defaultUser, doDrop
 
 module.exports = Postgresql
 
