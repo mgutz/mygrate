@@ -39,6 +39,7 @@ showUsage = ->
 
         --directory use different directory than migrations
         --examples  output examples
+        --me        use current user as superuser
     -?, --help      output usage information
     -U, --username  superuser username
     -W, --password  superuser password

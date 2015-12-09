@@ -8,6 +8,7 @@ _ = require("lodash")
 Wrench = require("wrench")
 str = require('underscore.string')
 ProjTemplate = require('uber-ngen')
+username = require('username')
 
 cwd = process.cwd()
 
@@ -468,10 +469,12 @@ Commands =
       process.exit 0
 
   dropDatabase: (argv) ->
+    argv.user = username.sync() if argv.me
     {schema, vendor} = dbInterface()
     schema.dropDatabase getDefaultUser(vendor), argv
 
   createDatabase: (argv) ->
+    argv.user = username.sync() if argv.me
     {schema, vendor} = dbInterface()
     schema.createDatabase getDefaultUser(vendor), argv
 

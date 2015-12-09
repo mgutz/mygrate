@@ -16,6 +16,7 @@
     "prompt": "^0.2.14",
     "uber-ngen": "^3.11.2",
     "underscore.string": "^2.4.0",
+    "username": "^1.0.1",
     "wrench": "^1.5.8"
   },
   "devDependencies": {
