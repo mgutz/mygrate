@@ -9,6 +9,9 @@ argv = require("minimist")(process.argv.slice(2), {
     template: "t"
     user: "U"
     version: "V"
+  boolean: [
+    "me"
+  ]
   default:
     directory: "migrations"
 })
