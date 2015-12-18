@@ -9,6 +9,7 @@ Wrench = require("wrench")
 str = require('underscore.string')
 ProjTemplate = require('uber-ngen')
 username = require('username')
+ps = require('./parseSprocs')
 
 cwd = process.cwd()
 
@@ -252,18 +253,18 @@ Commands =
         if versions.length > 0
           migrateUp = (version, cb) ->
             async.series {
-              prehook: (cb) ->
-                filename = Commands.migrationsDir + "/#{version}/prehook"
-                if Fs.existsSync(filename)
-                  timestamp = version.slice(0, 12)
-                  if minHookDate.slice(0, 12) > timestamp
-                    console.log "Skipping #{version}/prehook"
-                    return cb()
+              # prehook: (cb) ->
+              #   filename = Commands.migrationsDir + "/#{version}/prehook"
+              #   if Fs.existsSync(filename)
+              #     timestamp = version.slice(0, 12)
+              #     if minHookDate.slice(0, 12) > timestamp
+              #       console.log "Skipping #{version}/prehook"
+              #       return cb()
 
-                  console.log "Running #{version}/prehook"
-                  Utils.spawn filename, [], {cwd: Path.dirname(filename)}, cb
-                else
-                  cb()
+              #     console.log "Running #{version}/prehook"
+              #     Utils.spawn filename, [], {cwd: Path.dirname(filename)}, cb
+              #   else
+              #     cb()
 
               # some migrations need to be run outside of transaction
               notx: (cb) ->
@@ -299,6 +300,14 @@ Commands =
             msg += " Last migration: #{Commands.migrationsBasename}/"+lastMigration.version
           console.log msg
           cb null
+
+      registerSprocs: (cb) ->
+        sprocsDir = Path.join(Commands.migrationsDir, "sprocs", "*.sql")
+        ps.parseDirPattern sprocsDir, (err, sprocs) ->
+          return cb(err) if err
+          return cb() if sprocs.length == 0
+          async.eachSeries sprocs, schema.registerSproc.bind(schema), cb
+
     }, (err) ->
       if err
         console.error err
@@ -306,6 +315,8 @@ Commands =
       else
         console.log "OK"
         process.exit 0
+
+
 
 
   # Migrates down count versions or before a specific version.

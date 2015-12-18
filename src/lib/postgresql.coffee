@@ -140,9 +140,69 @@ class Postgresql
           down text,
           created_at timestamp default current_timestamp
         );
+
+        create table if not exists mygrate__sprocs (
+          name text primary key,
+          crc text not null,
+          created_at timestamp default current_timestamp
+        );
+
+        CREATE OR REPLACE FUNCTION mygrate__delfunc(_name text) returns void AS $$
+        BEGIN
+            EXECUTE (
+               SELECT string_agg(format('DROP FUNCTION %s(%s);'
+                                 ,oid::regproc
+                                 ,pg_catalog.pg_get_function_identity_arguments(oid))
+                      ,E'\n')
+               FROM   pg_proc
+               WHERE  proname = _name
+               AND    pg_function_is_visible(oid)
+            );
+        exception when others then
+            -- do nothing, EXEC above returns an exception if it does not
+          -- find existing function
+        END $$ LANGUAGE plpgsql;
+
       """
     @exec sql, cb
 
+  registerSproc: (info, cb) ->
+    state = { register: true, changed: false }
+    Async.series {
+      fnExists: (cb) =>
+        sql = """
+        SELECT name, crc
+        FROM mygrate__sprocs
+        WHERE name = $1
+        """
+        @store.sql(sql, [info.name, info.crc]).one (err, row) =>
+          return cb(err) if err
+          return cb() if !row
+
+          if row.crc == info.crc
+            state.register = false
+            return cb()
+
+          state.changed = true
+
+          # delete the function
+          @store.sql("SELECT mygrate__delfunc($1)", [info.name]).exec cb
+
+      registerFn: (cb) =>
+        return cb() if !state.register
+        sql = """
+        DELETE FROM mygrate__sprocs WHERE name = $1;
+        INSERT INTO mygrate__sprocs (name, crc) VALUES ($1, $2);
+        """
+        @store.sql(sql, [info.name, info.crc]).exec (err) =>
+          return cb(err) if err
+          # register the function
+          if state.changed
+            console.log "Updating sproc #{info.name}"
+          else
+            console.log "Registering sproc #{info.name}"
+          @store.sql(info.body).exec cb
+    }, cb
 
   last: (cb) ->
     sql = """
