@@ -168,7 +168,12 @@ class Postgresql
 
   registerSproc: (info, cb) ->
     state = { register: true, changed: false }
+
+    tx = @store.transactable()
     Async.series {
+      begin: (cb) =>
+        tx.begin(cb)
+
       fnExists: (cb) =>
         sql = """
         SELECT name, crc
@@ -202,7 +207,12 @@ class Postgresql
           else
             console.log "Registering sproc #{info.name}"
           @store.sql(info.body).exec cb
-    }, cb
+    }, (err) ->
+      if err
+        tx.rollback ->
+          cb(err)
+      tx.commit cb
+
 
   last: (cb) ->
     sql = """
