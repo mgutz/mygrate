@@ -209,7 +209,7 @@ class Postgresql
           @store.sql(info.body).exec cb
     }, (err) ->
       if err
-        tx.rollback ->
+        return tx.rollback ->
           cb(err)
       tx.commit cb
 
