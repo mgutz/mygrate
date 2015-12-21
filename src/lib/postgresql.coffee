@@ -60,9 +60,9 @@ class Postgresql
     @config.host = 'localhost' unless @config.host?
     @config.port = 5432 unless @config.port?
     @UserDb = Postgres.define(@config)
+    @store ?= new @UserDb()
 
   exec: (cmd, cb) ->
-    @store ?= new @UserDb()
     @store.sql(cmd).exec cb
 
   logError: (err) ->
