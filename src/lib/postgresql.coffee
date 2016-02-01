@@ -177,7 +177,7 @@ class Postgresql
       fnExists: (cb) =>
         sql = """
         SELECT name, crc
-        FROM mygratesprocs
+        FROM mygrate__sprocs
         WHERE name = $1
 
         UNION ALL
@@ -189,7 +189,7 @@ class Postgresql
           nspname = 'public'
           AND proname NOT IN (
             SELECT name
-            FROM mygratesprocs
+            FROM mygrate__sprocs
             WHERE name = $1
           )
         """
