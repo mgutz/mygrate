@@ -177,8 +177,21 @@ class Postgresql
       fnExists: (cb) =>
         sql = """
         SELECT name, crc
-        FROM mygrate__sprocs
+        FROM mygratesprocs
         WHERE name = $1
+
+        UNION ALL
+
+        SELECT  proname, '0'
+        FROM    pg_catalog.pg_namespace n
+        JOIN    pg_catalog.pg_proc p ON pronamespace = n.oid
+        WHERE
+          nspname = 'public'
+          AND proname NOT IN (
+            SELECT name
+            FROM mygratesprocs
+            WHERE name = $1
+          )
         """
         @store.sql(sql, [info.name, info.crc]).one (err, row) =>
           return cb(err) if err
