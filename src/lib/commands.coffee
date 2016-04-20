@@ -256,8 +256,6 @@ Commands =
           missing = false
           last = lastMigration.version
 
-          console.log "DBG:dirs", dirs
-
           # log any executed migration which does not exist locally
           for m in migrationsInDb
             if dirs.indexOf(m.version) < 0
