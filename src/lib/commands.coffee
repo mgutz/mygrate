@@ -227,6 +227,8 @@ Commands =
     {schema, config, minHookDate} = dbInterface()
     dirs = null
     lastMigration = null
+    migrationsInDb = null
+    relMigrationsDir =  "./" + Path.relative(process.cwd(), Commands.migrationsDir)
 
     async.series {
       ensureSchema: (cb) ->
@@ -238,10 +240,44 @@ Commands =
           dirs = subdirs.sort()
           cb null
 
+
+      getAllMigrations: (cb) ->
+        schema.all (err, migrations) ->
+          migrationsInDb = migrations
+          cb err
+
       getLastMigration: (cb) ->
         schema.last (err, migration) ->
           lastMigration = migration
           cb err
+
+      validateMigrations: (cb) ->
+        if lastMigration?
+          missing = false
+          last = lastMigration.version
+
+          console.log "DBG:dirs", dirs
+
+          # log any executed migration which does not exist locally
+          for m in migrationsInDb
+            if dirs.indexOf(m.version) < 0
+              console.error """
+                ERROR '#{m.version}' was migrated in DB but does not exist locally.
+                ./#{Path.relative(process.cwd(), Commands.migrationsDir)} dir might be out of sync.
+              """
+              missing = 1
+
+          # log any directory which has not been executed but is older than last migration
+          for d in dirs
+            if d < last && !_.find(migrationsInDb, (m) -> m.version == d)
+              console.error """
+                ERROR #{relMigrationsDir}/#{d} will be skipped since it is older than the
+                last migration '#{last}' in database. Rename the dir if it needs to be migrated.
+              """
+              missing = true
+          if missing
+            process.exit 1
+        cb null
 
       run: (cb) ->
         if lastMigration?.version
@@ -253,18 +289,6 @@ Commands =
         if versions.length > 0
           migrateUp = (version, cb) ->
             async.series {
-              # prehook: (cb) ->
-              #   filename = Commands.migrationsDir + "/#{version}/prehook"
-              #   if Fs.existsSync(filename)
-              #     timestamp = version.slice(0, 12)
-              #     if minHookDate.slice(0, 12) > timestamp
-              #       console.log "Skipping #{version}/prehook"
-              #       return cb()
-
-              #     console.log "Running #{version}/prehook"
-              #     Utils.spawn filename, [], {cwd: Path.dirname(filename)}, cb
-              #   else
-              #     cb()
 
               # some migrations need to be run outside of transaction
               notx: (cb) ->
