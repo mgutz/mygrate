@@ -112,6 +112,7 @@ class Postgresql
           tx.rollback ->
             return cb(1)
         else
+          console.log 'result', result
           tx.commit cb
 
   console: ->
