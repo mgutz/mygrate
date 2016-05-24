@@ -534,7 +534,13 @@ Commands =
     filename = Path.resolve(filename)
 
     {schema} = dbInterface()
-    schema.execFile filename, errHandler
+    schema.execFile filename, {printResult: true}, (err, result) ->
+      return errHandler(err) if err
+      if result
+        console.log JSON.stringify(result, null, 2)
+      else
+        console.log "Empty Rresult"
+      process.exit 0
 
   ping: (argv) ->
     sql = "select 1;"

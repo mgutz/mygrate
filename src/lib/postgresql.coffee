@@ -101,7 +101,7 @@ class Postgresql
           err = toSqlError(filename, err, script)
           console.error err
           return cb(1)
-        return cb()
+        return cb(null, result)
     else
       tx = @store.transactable()
       tx.begin()
@@ -112,8 +112,9 @@ class Postgresql
           tx.rollback ->
             return cb(1)
         else
-          console.log 'result', result
-          tx.commit cb
+          tx.commit (err) ->
+            return cb(err) if err
+            return cb(null, result)
 
   console: ->
     port = @config.port || 5432
@@ -369,10 +370,10 @@ class Postgresql
 
       rootConfig =
         user: user
-        password: password
         host: config.host
         port: config.port
         database: "postgres"
+      rootConfig.password = password if password
       RootDb = Postgres.define(rootConfig)
       store = new RootDb()
 
