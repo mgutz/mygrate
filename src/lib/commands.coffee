@@ -29,8 +29,6 @@ getDefaultUser = (vendor) ->
   switch vendor
     when 'mysql'
       user = 'root'
-    when 'mssql'
-      user = 'sa'
     else
       platform = Os.platform()
       if platform.match(/^darwin/)
@@ -117,7 +115,12 @@ getSubDirs = (dirname, cb) ->
 
 
 migrationFile = (version, which) ->
-  Path.resolve(Commands.migrationsDir+"/"+version+"/"+which+".sql")
+  # try sql first
+  filename = Path.resolve(Commands.migrationsDir+"/"+version+"/"+which+".sql")
+  return filename if Fs.existsSync(filename)
+
+  # try JS next
+  return Path.resolve(Commands.migrationsDir+"/"+version+"/"+which+".js")
 
 readMigrationFile = (migration, which) ->
   filename = migrationFile(migration, which)
@@ -130,14 +133,25 @@ readMigrationFile = (migration, which) ->
 down = (schema, migrations, cb) ->
   migrate = (version, cb) ->
     filename = migrationFile(version, "down")
-    pre = "Down #{Commands.migrationsBasename}/#{version}"
-    schema.execFile filename, (err) ->
-      return cb("#{pre}\n#{err}") if err
+    pre = ""
 
+    execDownScript = (cb) ->
+      if Fs.existsSync(filename)
+        pre = "Down #{Commands.migrationsBasename}/#{version}"
+        schema.execFile filename, (err) ->
+          return cb("#{pre}\n#{err}") if err
+          cb()
+      else
+        cb null
+
+    unrecord = (cb) ->
+      console.log('unrecord', filename)
       schema.remove version, (err) ->
         return cb("#{pre}\n#{err}") if err
         console.log "#{pre}"
         cb null
+
+    async.series [execDownScript, unrecord], cb
 
   async.forEachSeries migrations, migrate, cb
 
@@ -159,7 +173,6 @@ Commands =
   "console": ->
     {schema} = dbInterface()
     schema.console()
-
 
   # Generates a migration with optional `suffix`
   #
@@ -202,7 +215,7 @@ Commands =
   init: (argv) =>
     vendor = argv._[1]
 
-    if ['mysql', 'postgresql', 'mssql'].indexOf(vendor) < 0
+    if ['mysql', 'postgresql'].indexOf(vendor) < 0
       vendor = "postgresql"
 
     name = Path.basename(process.cwd()).replace(/\W/g, "_")
@@ -229,6 +242,7 @@ Commands =
     lastMigration = null
     migrationsInDb = null
     relMigrationsDir =  "./" + Path.relative(process.cwd(), Commands.migrationsDir)
+    execFn = Commands.exec
 
     async.series {
       ensureSchema: (cb) ->
@@ -284,6 +298,7 @@ Commands =
         else
           versions = dirs
 
+
         if versions.length > 0
           migrateUp = (version, cb) ->
             async.series {
@@ -295,23 +310,38 @@ Commands =
                   return cb()
 
                 schema.execFile filename, {notx: true}, (err) ->
-                    return cb(err) if err
+                  return cb(err) if err
 
-                    console.log "NoTx #{Commands.migrationsBasename}/#{version}"
-                    return cb()
+                  console.log "NoTx #{Commands.migrationsBasename}/#{version}"
+                  return cb()
 
               upscript: (cb) ->
                 filename = migrationFile(version, "up")
-                schema.execFile filename, (err) ->
-                  return cb("Up #{Commands.migrationsBasename}/#{version}: exit code #{err}") if err
+                ext = Path.extname(filename)
+                if ext == ".sql"
+                  schema.execFile filename, (err) ->
+                    return cb("Up #{Commands.migrationsBasename}/#{version}: exit code #{err}") if err
+                    cb()
+                else if ext == ".js"
+                  # execute the JS file which must export a migrate funciton
+                  # and accepts a connection string
+                  try
+                    script = require(filename)
+                    script.up execFn, cb
+                  catch err
+                    console.error "While executing script: #{filename}"
+                    return cb(err.message)
+                else
+                  cb("Unhandled migration file: #{filename}")
 
-                  up = readMigrationFile(version, "up")
-                  down = readMigrationFile(version, "down")
-                  schema.add version, up, down, (err) ->
-                    return cb(err) if err
+              recordMigration: (cb) ->
+                up = readMigrationFile(version, "up")
+                down = readMigrationFile(version, "down")
+                schema.add version, up, down, (err) ->
+                  return cb(err) if err
+                  console.log "Up #{Commands.migrationsBasename}/#{version}"
+                  cb null
 
-                    console.log "Up #{Commands.migrationsBasename}/#{version}"
-                    cb null
             }, cb
 
           async.forEachSeries versions, migrateUp, cb
@@ -337,8 +367,6 @@ Commands =
       else
         console.log "OK"
         process.exit 0
-
-
 
 
   # Migrates down count versions or before a specific version.
@@ -550,5 +578,44 @@ Commands =
         process.exit 1
       else
         process.exit  0
+
+  exec: (lambda, options, cb) =>
+    if arguments.length == 2
+      cb = options
+      options = {}
+
+    db = dbInterface().schema.store
+    if options.transaction
+      tx = db.transactable()
+
+      begin = (cb) ->
+        console.log 'BEGIN transaction'
+        tx.begin cb
+
+      execLambda = (cb) ->
+        async.series lambda(tx), cb
+
+      commit = (cb) ->
+        console.log 'COMMIT transaction'
+        tx.commit cb
+
+      series = [begin, execLambda, commit]
+      finaly = (err) ->
+        if err
+          console.error 'ERROR', err
+          console.log 'ROLLBACK transaction'
+          tx.rollback cb
+        else
+          console.log 'SUCCESS'
+          return cb()
+    else
+      execLambda = (cb) ->
+        async.series lambda(db), cb
+
+      series = [execLambda]
+      finaly = (err) ->
+        return cb(err)
+
+    async.series series, finaly
 
 module.exports = Commands
