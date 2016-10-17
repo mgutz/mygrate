@@ -10,7 +10,7 @@
   "dependencies": {
     "async": "^0.9.2",
     "cli-table": "^0.3.1",
-    "dalicious": "0.0.2",
+    "dalicious": "mgutz/dalicious#matcherino",
     "glob": "^6.0.1",
     "line-reader": "^0.3.0",
     "lodash": "^2.4.2",
