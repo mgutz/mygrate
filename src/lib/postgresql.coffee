@@ -170,6 +170,7 @@ class Postgresql
 
   registerSproc: (info, cb) ->
     state = { register: true, changed: false }
+    return cb() if !info.name
 
     tx = @store.transactable()
     Async.series {
