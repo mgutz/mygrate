@@ -43,7 +43,22 @@ getEnv = ->
 
 
 getEnvConfig = ->
-  getConfig()[getEnv()]
+  configs = getConfig()
+  config = configs[getEnv()]
+  return config if config
+
+  host = process.env.mygrate_host
+  unless host
+    console.error 'Config file not found or environment variables not set'
+    process.exit 1
+
+  return {
+    host: process.env.mygrate_host,
+    database:  process.env.mygrate_database,
+    password:  process.env.mygrate_password,
+    user:  process.env.mygrate_user,
+    batchSeparator: process.env.mygrate_batch_separator || 'GO'
+  }
 
 
 getConfig = ->
@@ -54,9 +69,9 @@ getConfig = ->
     return require(jsFile)
   else if Fs.existsSync(jsonFile)
     return require(jsonFile)
-  else
-    console.error "Config file migrations/config.{js,json} NOT FOUND"
-    process.exit 1
+
+  return null
+
 
 writeConfig = (config) ->
   Fs.writeFileSync Path.join(Commands.migrationsDir, "config.json"), JSON.stringify(config, null, '  ')
