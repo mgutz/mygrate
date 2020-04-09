@@ -43,22 +43,31 @@ getEnv = ->
 
 
 getEnvConfig = ->
+  if process.env.mygrate_host
+    driver = process.env.mgyrate_driver || 'postgresql'
+
+    result = {}
+    result[driver] = {
+      host: process.env.mygrate_host,
+      database:  process.env.mygrate_database,
+      password:  process.env.mygrate_password,
+      user:  process.env.mygrate_user,
+      batchSeparator: process.env.mygrate_batch_separator || 'GO'
+    }
+    for k of result[driver]
+      if not result[driver][k]
+        console.error 'mygrate_' + k + ' environment variable not set'
+        process.exit 1
+    return result
+
   configs = getConfig()
-  config = configs[getEnv()]
-  return config if config
+  if configs
+    config = configs[getEnv()]
+    return config if config
 
-  host = process.env.mygrate_host
-  unless host
-    console.error 'Config file not found or environment variables not set'
-    process.exit 1
+  console.error 'Config not found in file nor environment variables'
+  process.exit 1
 
-  return {
-    host: process.env.mygrate_host,
-    database:  process.env.mygrate_database,
-    password:  process.env.mygrate_password,
-    user:  process.env.mygrate_user,
-    batchSeparator: process.env.mygrate_batch_separator || 'GO'
-  }
 
 
 getConfig = ->
